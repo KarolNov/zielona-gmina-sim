@@ -7,47 +7,48 @@
 }
 
 :root {
-  --sea-ink: #173a40;
-  --sea-ink-soft: #416166;
-  --lagoon: #4fb8b2;
-  --lagoon-deep: #328f97;
-  --palm: #2f6a4a;
-  --sand: #e7f0e8;
-  --foam: #f3faf5;
-  --surface: rgba(255, 255, 255, 0.74);
-  --surface-strong: rgba(255, 255, 255, 0.9);
-  --line: rgba(23, 58, 64, 0.14);
-  --inset-glint: rgba(255, 255, 255, 0.82);
-  --kicker: rgba(47, 106, 74, 0.9);
-  --bg-base: #e7f3ec;
-  --header-bg: rgba(251, 255, 248, 0.84);
-  --chip-bg: rgba(255, 255, 255, 0.8);
-  --chip-line: rgba(47, 106, 74, 0.18);
-  --link-bg-hover: rgba(255, 255, 255, 0.9);
-  --hero-a: rgba(79, 184, 178, 0.36);
-  --hero-b: rgba(47, 106, 74, 0.2);
+  /* Green / white theme for PV ROI simulator */
+  --sea-ink: #0b2b13; /* dark green / near black for text */
+  --sea-ink-soft: #4b5b49; /* muted green for secondary text */
+  --lagoon: #9ddf7a; /* accent light green */
+  --lagoon-deep: #1f8a3d; /* primary green */
+  --palm: #166f31; /* deeper green */
+  --sand: #ffffff; /* pure white base */
+  --foam: #f6fff6; /* very light green surface */
+  --surface: rgba(246, 255, 246, 0.9);
+  --surface-strong: rgba(246, 255, 246, 0.98);
+  --line: rgba(31, 138, 61, 0.08);
+  --inset-glint: rgba(255, 255, 255, 0.9);
+  --kicker: rgba(31, 138, 61, 0.9);
+  --bg-base: #ffffff; /* page background white */
+  --header-bg: rgba(246, 255, 246, 0.9);
+  --chip-bg: rgba(255, 255, 255, 0.95);
+  --chip-line: rgba(31, 138, 61, 0.12);
+  --link-bg-hover: rgba(31, 138, 61, 0.06);
+  --hero-a: rgba(157, 223, 122, 0.18);
+  --hero-b: rgba(31, 138, 61, 0.12);
 }
 
 :root[data-theme="dark"] {
-  --sea-ink: #d7ece8;
-  --sea-ink-soft: #afcdc8;
-  --lagoon: #60d7cf;
-  --lagoon-deep: #8de5db;
+  --sea-ink: #d7f1e0;
+  --sea-ink-soft: #9fd6b6;
+  --lagoon: #60d78c;
+  --lagoon-deep: #8de5b0;
   --palm: #6ec89a;
-  --sand: #0f1a1e;
-  --foam: #101d22;
-  --surface: rgba(16, 30, 34, 0.8);
-  --surface-strong: rgba(15, 27, 31, 0.92);
-  --line: rgba(141, 229, 219, 0.18);
-  --inset-glint: rgba(194, 247, 238, 0.14);
+  --sand: #07120a;
+  --foam: #08140b;
+  --surface: rgba(8, 20, 11, 0.85);
+  --surface-strong: rgba(6, 14, 8, 0.96);
+  --line: rgba(141, 229, 219, 0.08);
+  --inset-glint: rgba(194, 247, 238, 0.06);
   --kicker: #b8efe5;
-  --bg-base: #0a1418;
-  --header-bg: rgba(10, 20, 24, 0.8);
-  --chip-bg: rgba(13, 28, 32, 0.9);
-  --chip-line: rgba(141, 229, 219, 0.24);
-  --link-bg-hover: rgba(24, 44, 49, 0.8);
-  --hero-a: rgba(96, 215, 207, 0.18);
-  --hero-b: rgba(110, 200, 154, 0.12);
+  --bg-base: #07140a;
+  --header-bg: rgba(8, 20, 11, 0.9);
+  --chip-bg: rgba(9, 24, 13, 0.9);
+  --chip-line: rgba(141, 229, 219, 0.06);
+  --link-bg-hover: rgba(20, 44, 29, 0.08);
+  --hero-a: rgba(96, 215, 207, 0.06);
+  --hero-b: rgba(110, 200, 154, 0.04);
 }
 
 @media (prefers-color-scheme: dark) {
