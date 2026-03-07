@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { SunIcon, MoonIcon, DesktopIcon } from '@phosphor-icons/react'
 
 type ThemeMode = 'light' | 'dark' | 'auto'
 
@@ -73,9 +74,16 @@ export default function ThemeToggle() {
       onClick={toggleMode}
       aria-label={label}
       title={label}
-      className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] shadow-[0_8px_22px_rgba(30,90,72,0.08)]"
+      className="flex gap-1 items-center justify-between min-w-25 rounded-full border border-(--chip-line) bg-(--chip-bg) px-3 py-1.5 text-sm font-semibold text-(--sea-ink) shadow-[0_8px_22px_rgba(30,90,72,0.08)]"
     >
+      <span className='-mt-0.5'>
       {mode === 'auto' ? 'Auto' : mode === 'dark' ? 'Ciemny' : 'Jasny'}
+      </span>
+      {mode === 'auto' ? (<DesktopIcon className="ml-1" size={16} />) : mode === 'dark' ? (
+        <MoonIcon className="ml-1" size={16} />
+      ) : (
+        <SunIcon className="ml-1" size={16} />
+      )}
     </button>
   )
 }
