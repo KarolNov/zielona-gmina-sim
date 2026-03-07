@@ -1,9 +1,13 @@
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { SolarSeasonalChart } from "#/components/charts/solar-averages-chart";
+import { getSolarSummary } from "#/lib/api/pvgis";
 import { CommuneType } from "#/lib/types";
 import { donationSchema } from "#/lib/validators/donation";
 import { getPvPowerSchema } from "#/lib/validators/pv-power";
 import { valibotValidator } from "#/lib/validators/valibot";
+import LatLonInput from "../components/inputs/LatLonInput";
 import NumberInput from "../components/inputs/NumberInput";
 import Select from "../components/inputs/Select";
 import Toggle from "../components/inputs/Toggle";
@@ -14,9 +18,25 @@ function App() {
 	const [communeSize, setCommuneSize] = useState<CommuneType>(
 		CommuneType.SMALL,
 	);
-	const [donation, setDonation] = useState(0);
-	const [pvPower, setPvPower] = useState(10);
-	const [storageEnabled, setStorageEnabled] = useState(false);
+	const [donation, setDonation] = useState<number>(0);
+	const [pvPower, setPvPower] = useState<number>(10);
+	const [storageEnabled, setStorageEnabled] = useState<boolean>(false);
+	const [lat, setLat] = useState<number>(52.2297);
+	const [lon, setLon] = useState<number>(21.0122);
+
+	const {
+		data: solarData,
+		isFetching: solarLoading,
+		error: solarError,
+		refetch: refetchSolar,
+	} = useQuery({
+		queryKey: ["solar", lat, lon, pvPower],
+		queryFn: () => {
+			return getSolarSummary(lat, lon, pvPower);
+		},
+    placeholderData: keepPreviousData,
+    staleTime: 5 * 60 * 1000, // 5 minut
+	});
 
 	return (
 		<main className="page-wrap px-4 pb-8 pt-14">
@@ -28,6 +48,7 @@ function App() {
 							"radial-gradient(circle, rgba(157,223,122,0.18), transparent 66%)",
 					}}
 				/>
+
 				<div
 					className="pointer-events-none absolute -bottom-20 -right-20 h-56 w-56 rounded-full"
 					style={{
@@ -35,15 +56,26 @@ function App() {
 							"radial-gradient(circle, rgba(31,138,61,0.12), transparent 66%)",
 					}}
 				/>
+
 				<p className="island-kicker mb-3">Symulator PV — Gmina</p>
 				<h1 className="display-title mb-5 max-w-3xl text-4xl leading-tight font-bold tracking-tight text-(--sea-ink) sm:text-6xl">
 					Symulator zwrotu inwestycji w spółdzielnie fotowoltaiczną
 				</h1>
+
 				<p className="mb-8 max-w-2xl text-base text-(--sea-ink-soft) sm:text-lg">
-					Wprowadź parametry gminy i instalacji, aby oszacować zwrot z
-					inwestycji.
+					Wprowadź parametry gminy i instalacji, a następnie pobierz profile
+					godzinowe nasłonecznienia dla wybranych współrzędnych. API pobierane
+					jest dla 1 kWp i wynik jest skalowany przez wybraną moc instalacji.
 				</p>
+
 				<div className="mt-6 grid gap-4 sm:grid-cols-2">
+					<LatLonInput
+						lat={lat}
+						lon={lon}
+						onLatChange={setLat}
+						onLonChange={setLon}
+					/>
+
 					<Select
 						id="communeSize"
 						label="Rozmiar gminy"
@@ -68,6 +100,7 @@ function App() {
 						name="donationPct"
 						id="donationPct"
 					/>
+
 					<NumberInput
 						label="Moc instalacji (kWp)"
 						value={pvPower}
@@ -78,12 +111,22 @@ function App() {
 						step={1}
 						name="pvPower"
 					/>
+
 					<Toggle
 						label="Użyć magazynu energii"
 						checked={storageEnabled}
 						onChange={setStorageEnabled}
 						name="storageEnabled"
 					/>
+
+					{solarError ? (
+						<div className="sm:col-span-2 text-sm text-red-600">
+							{solarError.message ?? String(solarError)}
+						</div>
+					) : null}
+					{solarData && (
+						<SolarSeasonalChart apiResponse={solarData} isRefetching={solarLoading} />
+					)}
 				</div>
 			</section>
 
@@ -94,7 +137,10 @@ function App() {
 						Wprowadź rozmiar gminy, procent dofinansowania, moc PV i dni
 						słoneczne.
 					</li>
-					<li>Kliknij "Zastosuj".</li>
+					<li>
+						Kliknij "Pobierz dane o słońcu" aby pobrać profile godzinowe (1
+						kWp), wyniki będą skalowane przez wybraną moc (kWp).
+					</li>
 					<li>Później: wykresy, obliczenia ROI.</li>
 				</ul>
 			</section>
