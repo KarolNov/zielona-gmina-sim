@@ -23,9 +23,6 @@ export const SolarSeasonalChart = ({
 	apiResponse,
 	isRefetching,
 }: SolarSeasonalChartProps) => {
-	// Przekształcamy dane:
-	// 1. Używamy helpera, żeby mieć nazwy miesięcy
-	// 2. Mnóżymy każdą wartość przez 'capacityKwp', żeby pokazać REALNĄ produkcję
 	const chartData = prepareMonthlyChartData(apiResponse.monthlyYields).map(
 		(item) => ({
 			...item,
@@ -108,7 +105,7 @@ export const SolarSeasonalChart = ({
 			</ResponsiveContainer>
 
 			<div className={`absolute inset-0 backdrop-blur-xs flex items-center justify-center transition-opacity${isRefetching ? "" : " pointer-events-none opacity-0 duration-500"}`}>
-				<span className="text-lg text-slate-500 italic">
+				<span className="text-lg text-(--surface) italic">
 					Aktualizacja danych...
 				</span>
 			</div>

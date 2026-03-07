@@ -65,7 +65,7 @@ function App() {
 				</h1>
 
 				<p className="mb-8 max-w-2xl text-base text-(--sea-ink-soft) sm:text-lg">
-					Wprowadź parametry gminy i instalacji. Profilowe nasłonecznienia są
+					Wprowadź parametry gminy i instalacji. Profile nasłonecznienia są
 					pobierane automatycznie po aktualizacji danych.
 				</p>
 
