@@ -45,14 +45,14 @@ export const SolarSeasonalChart = ({
 					<CartesianGrid
 						strokeDasharray="3 3"
 						vertical={false}
-						className="stroke-slate-200"
+						stroke="var(--line)"
 					/>
 
 					<XAxis
 						dataKey="nazwaMiesiaca"
 						tickLine={false}
 						axisLine={false}
-						className="text-xs text-slate-500"
+						tick={{ fill: "var(--sea-ink-soft)", fontSize: 12 }}
 					/>
 
 					{/* Oś Y: Ukrywamy, bo dodamy etykiety bezpośrednio nad słupkami */}
@@ -60,15 +60,24 @@ export const SolarSeasonalChart = ({
 
 					{/* Tooltip: Stylizowany w Tailwindzie */}
 					<Tooltip
-						cursor={{ fill: "rgba(74, 222, 128, 0.1)" }} // Delikatny hover background
+						cursor={{ fill: "var(--hero-a)" }} // Delikatny hover background that follows theme
 						content={({ active, payload, label }) => {
 							if (active && payload && payload.length) {
 								return (
-									<div className="bg-white p-3 rounded-lg shadow-lg border border-slate-200">
-										<p className="font-bold text-green-800">{label}</p>
+									<div
+										style={{
+											background: "var(--chip-bg)",
+											border: "1px solid var(--chip-line)",
+											color: "var(--sea-ink)",
+										}}
+										className="p-3 rounded-lg shadow-lg"
+									>
+										<p className="font-bold" style={{ color: "var(--lagoon-deep)" }}>
+											{label}
+										</p>
 										<p className="text-xs">
 											Produkcja:
-											<span className="font-bold text-sm">
+											<span className="font-bold text-sm" style={{ color: "var(--sea-ink)" }}>
 												{" "}
 												{payload[0].value?.toLocaleString("pl-PL")} kWh
 											</span>
@@ -81,12 +90,13 @@ export const SolarSeasonalChart = ({
 					/>
 
 					{/* Słupek: Kolor green-500 z Tailwinda, zaokrąglone rogi */}
-					<Bar dataKey="produkcja" fill="#22c55e" radius={[10, 10, 0, 0]}>
+					<Bar dataKey="produkcja" fill="var(--lagoon-deep)" radius={[10, 10, 0, 0]}>
 						{/* Etykiety nad słupkami */}
 						<LabelList
 							dataKey="produkcja"
 							position="top"
-							className="fill-green-900 font-medium text-[10px]"
+							fill="var(--sea-ink)"
+							style={{ fontWeight: 600, fontSize: 10 }}
 							formatter={(value) =>
 								Number(value) > 50
 									? `${Number(value).toLocaleString("pl-PL")}`
