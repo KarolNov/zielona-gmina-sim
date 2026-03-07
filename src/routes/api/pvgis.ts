@@ -22,11 +22,12 @@ export const Route = createAPIFileRoute('/api/pvgis')({
 
       const data = await resp.json()
 
+
       return new Response(JSON.stringify(data), {
         status: 200,
         headers: {
           'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*', 
+          'Cache-Control': 'public, s-maxage=3600', // Cache for 1h
         },
       })
     } catch (err) {
