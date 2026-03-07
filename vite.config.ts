@@ -12,15 +12,5 @@ export default defineConfig({
 		tailwindcss(),
 		tanstackStart(),
 		viteReact(),
-	],
-	server: {
-		proxy: {
-			// To działa TYLKO lokalnie w `npm run dev`
-			"/api/pvgis": {
-				target: "https://re.jrc.ec.europa.eu",
-				changeOrigin: true,
-				rewrite: (path) => path.replace(/^\/api\/pvgis/, "/api/v5_2"),
-			},
-		},
-	},
+	]
 });

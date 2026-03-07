@@ -1,7 +1,5 @@
 export async function getSolarData(lat: number, lon: number, kwp: number = 1) {
-  // Use a same-origin relative path so the dev server proxy or a server-side
-  // endpoint can forward the request to PVGIS and avoid CORS issues.
-  const url = `/api/pvgis/seriescalc?lat=${lat}&lon=${lon}&peakpower=${kwp}&loss=14&outputformat=json&hourly=1`;
+  const url = `https://re.jrc.ec.europa.eu/api/v5_2/PVcalc?lat=${lat}&lon=${lon}&peakpower=${kwp}&loss=14&outputformat=json&hourly=1`;
 
   const response = await fetch(url);
   if (!response.ok) {
@@ -29,8 +27,7 @@ export interface SolarAverages {
  * @note Aby uprościć, funkcja ta zwraca tylko sumę roczną i średnie miesięczne dla 1 kWp, a nie pełne profile godzinowe. Żeby uzyskać dane dla większej mocy, można pomnożyć wyniki przez wybraną moc instalacji.
  */
 export async function getSolarSummary(lat: number, lon: number, kpw = 1): Promise<SolarAverages> {
-  // Call the same-origin proxy path; the server proxy should forward to PVcalc.
-  const url = `/api/pvgis/PVcalc?lat=${lat}&lon=${lon}&peakpower=${kpw}&loss=14&mountingplace=free&angle=35&aspect=0&outputformat=json`;
+  const url = `https://re.jrc.ec.europa.eu/api/v5_2/PVcalc?lat=${lat}&lon=${lon}&peakpower=${kpw}&loss=14&mountingplace=free&angle=35&aspect=0&outputformat=json`;
 
   const response = await fetch(url);
   if (!response.ok) throw new Error('Błąd pobierania danych z PVGIS');

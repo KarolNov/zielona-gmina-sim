@@ -1,8 +1,9 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { SolarSeasonalChart } from "#/components/charts/solar-averages-chart";
-import { getSolarSummary } from "#/lib/api/pvgis";
+import { fetchSolarSummary } from "#/lib/fetch";
 import { CommuneType } from "#/lib/types";
 import { donationSchema } from "#/lib/validators/donation";
 import { getPvPowerSchema } from "#/lib/validators/pv-power";
@@ -15,6 +16,7 @@ import Toggle from "../components/inputs/Toggle";
 export const Route = createFileRoute("/")({ component: App });
 
 function App() {
+	const getSolarSummary = useServerFn(fetchSolarSummary);
 	const [communeSize, setCommuneSize] = useState<CommuneType>(
 		CommuneType.SMALL,
 	);
@@ -32,7 +34,7 @@ function App() {
 	} = useQuery({
 		queryKey: ["solar", lat, lon, pvPower],
 		queryFn: () => {
-			return getSolarSummary(lat, lon, pvPower);
+			return getSolarSummary({ data: { lat, lon, pvPower } });
 		},
 		placeholderData: keepPreviousData,
 		staleTime: 60 * 60 * 1000, // 60 minut
@@ -67,7 +69,7 @@ function App() {
 					pobierane automatycznie po aktualizacji danych.
 				</p>
 
-				<div className="mt-6 grid gap-4 sm:grid-cols-2">
+				<div className="mt-6 grid gap-4 md:grid-cols-2">
 					<LatLonInput
 						lat={lat}
 						lon={lon}
@@ -125,12 +127,14 @@ function App() {
 							{solarError.message ?? String(solarError)}
 						</div>
 					) : null}
-					{solarData ? 
+					{solarData ? (
 						<SolarSeasonalChart
 							apiResponse={solarData}
 							isRefetching={solarLoading}
 						/>
-					 : <div/>}
+					) : (
+						<div />
+					)}
 				</div>
 			</section>
 
