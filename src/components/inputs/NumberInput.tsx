@@ -11,7 +11,7 @@ type NumberInputProps = {
   validator?: ValidatorFn
   name?: string
   decimal?: number
-  id: string
+  id?: string
 }
 
 export default function NumberInput({

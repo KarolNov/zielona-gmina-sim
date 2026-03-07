@@ -3,23 +3,23 @@ type Option = {
   label: string
 }
 
-type SelectProps = {
+type SelectProps<T extends string> =  {
   label?: string
-  value: string
-  onChange: (value: string) => void
+  value: T
+  onChange: (value: T) => void
   options: Option[]
   name?: string
   id: string
 }
 
-export default function Select({
+export default function Select<T extends string>({
   label,
   value,
   onChange,
   options,
   name,
   id
-}: SelectProps) {
+}: SelectProps<T>) {
   return (
     <div className="flex flex-col gap-2">
   {label ? <label htmlFor={id} className="text-sm font-medium text-(--sea-ink)">{label}</label> : null}
@@ -28,7 +28,7 @@ export default function Select({
           id={id}
           name={name}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => onChange(e.target.value as T)}
           className="w-full rounded-md border border-(--chip-line) bg-(--chip-bg) px-3 py-2 text-(--sea-ink) shadow-sm focus:outline-none focus:ring-2 focus:ring-(--lagoon-deep)"
         >
           {options.map((opt) => (

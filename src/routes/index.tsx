@@ -1,15 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { CommuneType } from "#/lib/types";
 import { donationSchema } from "#/lib/validators/donation";
+import { getPvPowerSchema } from "#/lib/validators/pv-power";
 import { valibotValidator } from "#/lib/validators/valibot";
 import NumberInput from "../components/inputs/NumberInput";
 import Select from "../components/inputs/Select";
+import Toggle from "../components/inputs/Toggle";
 
 export const Route = createFileRoute("/")({ component: App });
 
 function App() {
-	const [communeSize, setCommuneSize] = useState("mala");
+	const [communeSize, setCommuneSize] = useState<CommuneType>(
+		CommuneType.SMALL,
+	);
 	const [donation, setDonation] = useState(0);
+	const [pvPower, setPvPower] = useState(10);
+	const [storageEnabled, setStorageEnabled] = useState(false);
 
 	return (
 		<main className="page-wrap px-4 pb-8 pt-14">
@@ -43,9 +50,9 @@ function App() {
 						value={communeSize}
 						onChange={setCommuneSize}
 						options={[
-							{ value: "mala", label: "Mała (< 10 000)" },
-							{ value: "srednia", label: "Średnia (10 000–50 000)" },
-							{ value: "duza", label: "Duża (> 50 000)" },
+							{ value: CommuneType.SMALL, label: "Mała (< 10 000)" },
+							{ value: CommuneType.MEDIUM, label: "Średnia (10 000–50 000)" },
+							{ value: CommuneType.LARGE, label: "Duża (> 50 000)" },
 						]}
 					/>
 
@@ -56,10 +63,26 @@ function App() {
 						min={0}
 						max={100}
 						step={1}
-            decimal={2}
+						decimal={2}
 						validator={valibotValidator(donationSchema)}
 						name="donationPct"
 						id="donationPct"
+					/>
+					<NumberInput
+						label="Moc instalacji (kWp)"
+						value={pvPower}
+						onChange={setPvPower}
+						validator={valibotValidator(getPvPowerSchema(communeSize))}
+						min={0}
+						max={500}
+						step={1}
+						name="pvPower"
+					/>
+					<Toggle
+						label="Użyć magazynu energii"
+						checked={storageEnabled}
+						onChange={setStorageEnabled}
+						name="storageEnabled"
 					/>
 				</div>
 			</section>
