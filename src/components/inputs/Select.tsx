@@ -1,5 +1,3 @@
-// Simple select input used across the app
-
 type Option = {
   value: string
   label: string
@@ -11,6 +9,7 @@ type SelectProps = {
   onChange: (value: string) => void
   options: Option[]
   name?: string
+  id: string
 }
 
 export default function Select({
@@ -19,12 +18,14 @@ export default function Select({
   onChange,
   options,
   name,
+  id
 }: SelectProps) {
   return (
     <div className="flex flex-col gap-2">
-  {label ? <label className="text-sm font-medium text-(--sea-ink)">{label}</label> : null}
+  {label ? <label htmlFor={id} className="text-sm font-medium text-(--sea-ink)">{label}</label> : null}
       <div className="relative">
         <select
+          id={id}
           name={name}
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -36,11 +37,6 @@ export default function Select({
             </option>
           ))}
         </select>
-        <div className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </div>
       </div>
     </div>
   )

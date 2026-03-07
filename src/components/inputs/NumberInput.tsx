@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { ValidatorFn } from '../../lib/validators/valibot'
 
 type NumberInputProps = {
@@ -10,6 +10,8 @@ type NumberInputProps = {
   step?: number
   validator?: ValidatorFn
   name?: string
+  decimal?: number
+  id: string
 }
 
 export default function NumberInput({
@@ -19,26 +21,27 @@ export default function NumberInput({
   min,
   max,
   step = 1,
+  decimal,
   validator,
   name,
+  id
 }: NumberInputProps) {
+  const inputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
 
   function handleChange(raw: string) {
-    const parsed = raw === '' ? NaN : Number(raw)
+    if (raw === '') return
+    let parsed = Number(raw)
     if (Number.isNaN(parsed)) {
       setError('Wprowadź wartość liczbową')
       return
     }
 
-    if (min !== undefined && parsed < min) {
-      setError(`Minimalna wartość to ${min}`)
-      return
-    }
-
-    if (max !== undefined && parsed > max) {
-      setError(`Maksymalna wartość to ${max}`)
-      return
+    parsed = Math.min(max ?? Infinity, Math.max(min ?? -Infinity, parsed))
+    
+    if (decimal !== undefined) {
+      const factor = 10 ** decimal
+      parsed = Math.round(parsed * factor) / factor
     }
 
     if (validator) {
@@ -51,16 +54,26 @@ export default function NumberInput({
 
     setError(null)
     onChange(parsed)
+    if (inputRef.current) {
+      inputRef.current.value = String(parsed)
+    }
   }
 
   return (
     <div className="flex flex-col gap-2">
-      {label ? <label className="text-sm font-medium text-(--sea-ink)">{label}</label> : null}
+      {label ? <label htmlFor={id} className="text-sm font-medium text-(--sea-ink)">{label}</label> : null}
       <input
+        id={id}
         name={name}
         type="number"
-        value={Number.isNaN(value) ? '' : value}
-        onChange={(e) => handleChange(e.target.value)}
+        defaultValue={value}
+        onBlur={(e) => handleChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && inputRef.current) {
+            inputRef.current.blur()
+          }
+        }}
+        ref={inputRef}
         min={min}
         max={max}
         step={step}

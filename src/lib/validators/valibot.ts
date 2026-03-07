@@ -1,12 +1,11 @@
+import * as v from "valibot"
+
 export type ValidatorFn = (value: number) => true | string
 
-// Lightweight wrapper: if valibot is available, you can build schemas and
-// provide a function here. For now, we provide a simple range validator helper.
-
-export function rangeValidator(min?: number, max?: number): ValidatorFn {
+export const valibotValidator = (schema: v.BaseSchema<unknown, unknown, v.BaseIssue<unknown>>): ValidatorFn => {
   return (value: number) => {
-    if (min !== undefined && value < min) return `Minimalna wartość to ${min}`
-    if (max !== undefined && value > max) return `Maksymalna wartość to ${max}`
-    return true
+    const res = v.safeParse(schema, value)
+    if (res.success) return true
+    return res.issues.map(issue => issue.message).join(", ")
   }
 }
