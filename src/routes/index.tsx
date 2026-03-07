@@ -28,14 +28,14 @@ function App() {
 		data: solarData,
 		isFetching: solarLoading,
 		error: solarError,
-		refetch: refetchSolar,
+		// refetch: refetchSolar,
 	} = useQuery({
 		queryKey: ["solar", lat, lon, pvPower],
 		queryFn: () => {
 			return getSolarSummary(lat, lon, pvPower);
 		},
-    placeholderData: keepPreviousData,
-    staleTime: 5 * 60 * 1000, // 5 minut
+		placeholderData: keepPreviousData,
+		staleTime: 60 * 60 * 1000, // 60 minut
 	});
 
 	return (
@@ -63,9 +63,8 @@ function App() {
 				</h1>
 
 				<p className="mb-8 max-w-2xl text-base text-(--sea-ink-soft) sm:text-lg">
-					Wprowadź parametry gminy i instalacji, a następnie pobierz profile
-					godzinowe nasłonecznienia dla wybranych współrzędnych. API pobierane
-					jest dla 1 kWp i wynik jest skalowany przez wybraną moc instalacji.
+					Wprowadź parametry gminy i instalacji. Profilowe nasłonecznienia są
+					pobierane automatycznie po aktualizacji danych.
 				</p>
 
 				<div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -112,21 +111,26 @@ function App() {
 						name="pvPower"
 					/>
 
-					<Toggle
-						label="Użyć magazynu energii"
-						checked={storageEnabled}
-						onChange={setStorageEnabled}
-						name="storageEnabled"
-					/>
+					<div>
+						<Toggle
+							label="Użyć magazynu energii"
+							checked={storageEnabled}
+							onChange={setStorageEnabled}
+							name="storageEnabled"
+						/>
+					</div>
 
 					{solarError ? (
 						<div className="sm:col-span-2 text-sm text-red-600">
 							{solarError.message ?? String(solarError)}
 						</div>
 					) : null}
-					{solarData && (
-						<SolarSeasonalChart apiResponse={solarData} isRefetching={solarLoading} />
-					)}
+					{solarData ? 
+						<SolarSeasonalChart
+							apiResponse={solarData}
+							isRefetching={solarLoading}
+						/>
+					 : <div/>}
 				</div>
 			</section>
 
@@ -134,12 +138,8 @@ function App() {
 				<p className="island-kicker mb-2">Jak korzystać?</p>
 				<ul className="m-0 list-disc space-y-2 pl-5 text-sm text-(--sea-ink-soft)">
 					<li>
-						Wprowadź rozmiar gminy, procent dofinansowania, moc PV i dni
-						słoneczne.
-					</li>
-					<li>
-						Kliknij "Pobierz dane o słońcu" aby pobrać profile godzinowe (1
-						kWp), wyniki będą skalowane przez wybraną moc (kWp).
+						Wprowadź lokalizację i rozmiar gminy, procent dofinansowania, moc
+						PV.
 					</li>
 					<li>Później: wykresy, obliczenia ROI.</li>
 				</ul>

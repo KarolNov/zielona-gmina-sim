@@ -9,6 +9,26 @@ npm install
 npm run dev
 ```
 
+## Cloudflare / Deployment notes
+
+This project includes a small Pages Function at `functions/pvgis.ts` which proxies requests to the JRC PVGIS API so browser clients won't be blocked by CORS. In development Vite already proxies `/api/pvgis/*` to the PVGIS host (see `vite.config.ts`).
+
+CI: There's a GitHub Actions workflow at `.github/workflows/deploy.yml` that runs on pushes to `main`. It builds the project and runs `wrangler publish` — the workflow requires a `CF_API_TOKEN` secret with permission to publish your Pages/Workers site.
+
+To test locally:
+
+1. Start dev server:
+
+```bash
+npm install
+npm run dev
+```
+
+2. Visit the app and trigger the solar data fetch — the dev proxy will forward the request.
+
+To deploy from CI you must add the `CF_API_TOKEN` secret to your repository secrets. If you'd prefer a different CI or deployment flow (e.g., Vercel), tell me and I'll adapt the workflow.
+
+
 # Building For Production
 
 To build this application for production:
