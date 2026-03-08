@@ -1,9 +1,10 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState } from "react";
+import { type ComponentType, useEffect, useState } from "react";
 import { SolarSeasonalChart } from "#/components/charts/solar-averages-chart";
-import SolarMap from "#/components/map/map";
+// SolarMap uses Leaflet which references `window`. To avoid SSR errors we
+// dynamically import the component on the client only (see below).
 import { fetchSolarSummary } from "#/lib/fetch";
 import { CommuneType } from "#/lib/types";
 import { donationSchema } from "#/lib/validators/donation";
@@ -24,8 +25,32 @@ function App() {
 	const [donation, setDonation] = useState<number>(0);
 	const [pvPower, setPvPower] = useState<number>(10);
 	const [storageEnabled, setStorageEnabled] = useState<boolean>(false);
+	// Percent of storage capacity relative to PV power (0-100)
+	const [storagePct, setStoragePct] = useState<number>(50);
 	const [lat, setLat] = useState<number>(52.2297);
+
+	// Estimated storage capacity in kWh derived from PV power and percent
+	const storageCapacity = Math.round(((pvPower * storagePct) / 100) * 10) / 10;
 	const [lon, setLon] = useState<number>(21.0122);
+	type SolarMapProps = { onLocationSelect: (lat: number, lng: number) => void };
+	const [SolarMapComponent, setSolarMapComponent] =
+		useState<ComponentType<SolarMapProps> | null>(null);
+
+	useEffect(() => {
+		let mounted = true;
+
+		// Import on client only to avoid SSR failures from Leaflet's `window` usage
+		import("#/components/map/map").then((mod) => {
+			if (!mounted) return;
+			// Use default export if available
+			const Comp = mod?.default ?? mod;
+			setSolarMapComponent(() => Comp as ComponentType<SolarMapProps>);
+		});
+
+		return () => {
+			mounted = false;
+		};
+	}, []);
 
 	const {
 		data: solarData,
@@ -71,78 +96,107 @@ function App() {
 				</p>
 
 				<div className="mt-6 grid gap-4 md:grid-cols-2">
-					<SolarMap
-						onLocationSelect={(lat, lng) => {
-              console.log("Location selected:", { lat, lng });
-							setLat(lat);
-							setLon(lng);
-						}}
-					/>
-					<LatLonInput
-						lat={lat}
-						lon={lon}
-						onLatChange={setLat}
-						onLonChange={setLon}
-					/>
-
-					<Select
-						id="communeSize"
-						label="Rozmiar gminy"
-						value={communeSize}
-						onChange={setCommuneSize}
-						options={[
-							{ value: CommuneType.SMALL, label: "Mała (< 10 000)" },
-							{ value: CommuneType.MEDIUM, label: "Średnia (10 000–50 000)" },
-							{ value: CommuneType.LARGE, label: "Duża (> 50 000)" },
-						]}
-					/>
-
-					<NumberInput
-						label="Dofinansowanie (%)"
-						value={donation}
-						onChange={setDonation}
-						min={0}
-						max={100}
-						step={1}
-						decimal={2}
-						validator={valibotValidator(donationSchema)}
-						name="donationPct"
-						id="donationPct"
-					/>
-
-					<NumberInput
-						label="Moc instalacji (kWp)"
-						value={pvPower}
-						onChange={setPvPower}
-						validator={valibotValidator(getPvPowerSchema(communeSize))}
-						min={0}
-						max={500}
-						step={1}
-						name="pvPower"
-					/>
-
 					<div>
-						<Toggle
-							label="Użyć magazynu energii"
-							checked={storageEnabled}
-							onChange={setStorageEnabled}
-							name="storageEnabled"
+						<div className="mb-4">
+							{SolarMapComponent ? (
+								<SolarMapComponent
+									onLocationSelect={(lat, lng) => {
+										setLat(lat);
+										setLon(lng);
+									}}
+								/>
+							) : (
+								// Placeholder while the client-only map component loads
+								<div className="h-100 w-full rounded-lg bg-gray-200 flex items-center justify-center"></div>
+							)}
+						</div>
+						<LatLonInput
+							lat={lat}
+							lon={lon}
+							onLatChange={setLat}
+							onLonChange={setLon}
 						/>
 					</div>
+					<div className="flex flex-col gap-4">
+						<Select
+							id="communeSize"
+							label="Rozmiar gminy"
+							value={communeSize}
+							onChange={setCommuneSize}
+							options={[
+								{ value: CommuneType.SMALL, label: "Mała (< 10 000)" },
+								{ value: CommuneType.MEDIUM, label: "Średnia (10 000–50 000)" },
+								{ value: CommuneType.LARGE, label: "Duża (> 50 000)" },
+							]}
+						/>
+
+						<NumberInput
+							label="Dofinansowanie (%)"
+							value={donation}
+							onChange={setDonation}
+							min={0}
+							max={100}
+							step={1}
+							decimal={2}
+							validator={valibotValidator(donationSchema)}
+							name="donationPct"
+							id="donationPct"
+						/>
+
+						<NumberInput
+							label="Moc instalacji (kWp)"
+							value={pvPower}
+							onChange={setPvPower}
+							validator={valibotValidator(getPvPowerSchema(communeSize))}
+							min={0}
+							max={500}
+							step={1}
+							name="pvPower"
+						/>
+
+						<div>
+							<Toggle
+								label="Użyć magazynu energii"
+								checked={storageEnabled}
+								onChange={setStorageEnabled}
+								name="storageEnabled"
+							/>
+						</div>
+
+						{storageEnabled ? (
+							<>
+								<NumberInput
+									label="% pojemności magazynu względem mocy PV"
+									value={storagePct}
+									onChange={setStoragePct}
+									min={0}
+									max={100}
+									step={1}
+									decimal={0}
+									name="storagePct"
+									id="storagePct"
+								/>
+								<div className="text-sm text-(--sea-ink-soft)">
+									Szacowana pojemność: {storageCapacity} kWh
+								</div>
+							</>
+						) : null}
+					</div>
+				</div>
+
+				<div className="mt-6 w-full h-fit">
+					{solarData && (
+						<SolarSeasonalChart
+							apiResponse={solarData}
+							isRefetching={solarLoading}
+						/>
+					)}
 
 					{solarError ? (
 						<div className="sm:col-span-2 text-sm text-red-600">
 							{solarError.message ?? String(solarError)}
 						</div>
 					) : null}
-					{solarData ? (
-						<SolarSeasonalChart
-							apiResponse={solarData}
-							isRefetching={solarLoading}
-						/>
-					) : (
-						<div />
-					)}
 				</div>
 			</section>
 

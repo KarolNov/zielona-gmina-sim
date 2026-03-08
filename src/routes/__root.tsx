@@ -44,7 +44,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 		<html lang="en" suppressHydrationWarning>
 			<head>
 				{/** biome-ignore lint/security/noDangerouslySetInnerHtml: <needed> */}
-<script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+				<script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
 				<HeadContent />
 			</head>
 			<body className="font-sans antialiased wrap-anywhere selection:bg-[rgba(79,184,178,0.24)]">
