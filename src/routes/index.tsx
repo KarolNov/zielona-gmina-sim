@@ -3,6 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { SolarSeasonalChart } from "#/components/charts/solar-averages-chart";
+import SolarMap from "#/components/map/map";
 import { fetchSolarSummary } from "#/lib/fetch";
 import { CommuneType } from "#/lib/types";
 import { donationSchema } from "#/lib/validators/donation";
@@ -70,6 +71,13 @@ function App() {
 				</p>
 
 				<div className="mt-6 grid gap-4 md:grid-cols-2">
+					<SolarMap
+						onLocationSelect={(lat, lng) => {
+              console.log("Location selected:", { lat, lng });
+							setLat(lat);
+							setLon(lng);
+						}}
+					/>
 					<LatLonInput
 						lat={lat}
 						lon={lon}

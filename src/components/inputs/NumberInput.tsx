@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ValidatorFn } from '../../lib/validators/valibot'
 
 type NumberInputProps = {
@@ -58,6 +58,12 @@ export default function NumberInput({
       inputRef.current.value = String(parsed)
     }
   }
+
+  useEffect(() => {
+    if (inputRef.current) {
+      inputRef.current.value = String(value)
+    }
+  }, [value])
 
   return (
     <div className="flex flex-col gap-2">
