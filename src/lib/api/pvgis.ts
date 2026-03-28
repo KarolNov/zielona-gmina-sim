@@ -22,12 +22,15 @@ export interface SolarAverages {
 }
 /**
  * Pobiera roczne i miesięczne średnie produkcji energii dla danej lokalizacji.
+ * PVGIS zwraca wartości już przeskalowane do podanej mocy i kąta nachylenia.
+ *
  * @param lat - szerokość geograficzna
  * @param lon - długość geograficzna
- * @note Aby uprościć, funkcja ta zwraca tylko sumę roczną i średnie miesięczne dla 1 kWp, a nie pełne profile godzinowe. Żeby uzyskać dane dla większej mocy, można pomnożyć wyniki przez wybraną moc instalacji.
+ * @param kpw - moc instalacji w kWp (domyślnie 1)
+ * @param angle - kąt nachylenia paneli w stopniach (domyślnie 35°)
  */
-export async function getSolarSummary(lat: number, lon: number, kpw = 1): Promise<SolarAverages> {
-  const url = `https://re.jrc.ec.europa.eu/api/v5_2/PVcalc?lat=${lat}&lon=${lon}&peakpower=${kpw}&loss=14&mountingplace=free&angle=35&aspect=0&outputformat=json`;
+export async function getSolarSummary(lat: number, lon: number, kpw = 1, angle = 35): Promise<SolarAverages> {
+  const url = `https://re.jrc.ec.europa.eu/api/v5_2/PVcalc?lat=${lat}&lon=${lon}&peakpower=${kpw}&loss=14&mountingplace=free&angle=${angle}&aspect=0&outputformat=json`;
 
   const response = await fetch(url);
   if (!response.ok) throw new Error('Błąd pobierania danych z PVGIS');

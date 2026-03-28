@@ -6,10 +6,11 @@ const SolarParams = v.object({
   lat: v.number(),
   lon: v.number(),
   pvPower: v.number(),
+  angle: v.optional(v.number()),
 });
 
 export const fetchSolarSummary = createServerFn({ method: 'GET'})
 .inputValidator(SolarParams)
 .handler(async (ctx) => {
-  return getSolarSummary(ctx.data.lat, ctx.data.lon, ctx.data.pvPower);
+  return getSolarSummary(ctx.data.lat, ctx.data.lon, ctx.data.pvPower, ctx.data.angle);
 })
