@@ -7,7 +7,11 @@ import { SolarSeasonalChart } from "#/components/charts/solar-averages-chart";
 // dynamically import the component on the client only (see below).
 import { fetchSolarSummary } from "#/lib/fetch";
 import { CommuneType } from "#/lib/types";
+import { cenaEnergiiSchema } from "#/lib/validators/cena-energii";
+import { cenaSprzedazySchema } from "#/lib/validators/cena-sprzedazy";
+import { degradacjaSchema } from "#/lib/validators/degradacja";
 import { donationSchema } from "#/lib/validators/donation";
+import { inflacjaSchema } from "#/lib/validators/inflacja";
 import { getPvPowerSchema } from "#/lib/validators/pv-power";
 import { valibotValidator } from "#/lib/validators/valibot";
 import LatLonInput from "../components/inputs/LatLonInput";
@@ -27,6 +31,12 @@ function App() {
 	const [storageEnabled, setStorageEnabled] = useState<boolean>(false);
 	// Percent of storage capacity relative to PV power (0-100)
 	const [storagePct, setStoragePct] = useState<number>(50);
+	// Parametry techniczne
+	const [degradacja, setDegradacja] = useState<number>(0.5);
+	// Parametry rynkowe
+	const [cenaEnergii, setCenaEnergii] = useState<number>(0.85);
+	const [cenaSprzedazy, setCenaSprzedazy] = useState<number>(0.4);
+	const [inflacjaEnergii, setInflacjaEnergii] = useState<number>(3);
 	const [lat, setLat] = useState<number>(52.2297);
 
 	// Estimated storage capacity in kWh derived from PV power and percent
@@ -197,6 +207,64 @@ function App() {
 							{solarError.message ?? String(solarError)}
 						</div>
 					) : null}
+				</div>
+
+				<div className="mt-8 grid gap-8 md:grid-cols-2">
+					<div className="flex flex-col gap-4">
+						<p className="island-kicker">Parametry techniczne</p>
+						<NumberInput
+							label="Degradacja paneli r/r (%)"
+							value={degradacja}
+							onChange={setDegradacja}
+							min={0}
+							max={2}
+							step={0.1}
+							decimal={1}
+							validator={valibotValidator(degradacjaSchema)}
+							name="degradacja"
+							id="degradacja"
+						/>
+					</div>
+
+					<div className="flex flex-col gap-4">
+						<p className="island-kicker">Parametry rynkowe</p>
+						<NumberInput
+							label="Cena energii z sieci (PLN/kWh)"
+							value={cenaEnergii}
+							onChange={setCenaEnergii}
+							min={0.1}
+							max={3}
+							step={0.01}
+							decimal={2}
+							validator={valibotValidator(cenaEnergiiSchema)}
+							name="cenaEnergii"
+							id="cenaEnergii"
+						/>
+						<NumberInput
+							label="Cena sprzedaży nadwyżek (PLN/kWh)"
+							value={cenaSprzedazy}
+							onChange={setCenaSprzedazy}
+							min={0}
+							max={3}
+							step={0.01}
+							decimal={2}
+							validator={valibotValidator(cenaSprzedazySchema)}
+							name="cenaSprzedazy"
+							id="cenaSprzedazy"
+						/>
+						<NumberInput
+							label="Inflacja ceny energii (%/rok)"
+							value={inflacjaEnergii}
+							onChange={setInflacjaEnergii}
+							min={0}
+							max={15}
+							step={0.5}
+							decimal={1}
+							validator={valibotValidator(inflacjaSchema)}
+							name="inflacjaEnergii"
+							id="inflacjaEnergii"
+						/>
+					</div>
 				</div>
 			</section>
 
