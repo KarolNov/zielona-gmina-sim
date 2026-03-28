@@ -1,11 +1,18 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { MapPin, X } from "lucide-react";
-import { type ComponentType, useEffect, useRef, useState } from "react";
+import {
+	type ComponentType,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 // SolarMap uses Leaflet which references `window`. To avoid SSR errors we
 // dynamically import the component on the client only (see below).
 import { fetchSolarSummary } from "#/lib/fetch";
+import { num, type SearchParams, searchDefaults } from "#/lib/search-params";
 import { CommuneType } from "#/lib/types";
 import { cenaEnergiiSchema } from "#/lib/validators/cena-energii";
 import { cenaSprzedazySchema } from "#/lib/validators/cena-sprzedazy";
@@ -19,30 +26,63 @@ import NumberInput from "../components/inputs/NumberInput";
 import Select from "../components/inputs/Select";
 import Toggle from "../components/inputs/Toggle";
 
-export const Route = createFileRoute("/")({ component: App });
+export const Route = createFileRoute("/")({
+	component: App,
+	validateSearch: (raw: Record<string, unknown>): SearchParams => ({
+		communeSize: Object.values(CommuneType).includes(
+			raw.communeSize as CommuneType,
+		)
+			? (raw.communeSize as CommuneType)
+			: searchDefaults.communeSize,
+		donation: num(raw.donation, searchDefaults.donation),
+		pvPower: num(raw.pvPower, searchDefaults.pvPower),
+		storageEnabled:
+			raw.storageEnabled === true || raw.storageEnabled === "true",
+		storagePct: num(raw.storagePct, searchDefaults.storagePct),
+		degradacja: num(raw.degradacja, searchDefaults.degradacja),
+		katNachylenia: num(raw.katNachylenia, searchDefaults.katNachylenia),
+		cenaEnergii: num(raw.cenaEnergii, searchDefaults.cenaEnergii),
+		cenaSprzedazy: num(raw.cenaSprzedazy, searchDefaults.cenaSprzedazy),
+		inflacjaEnergii: num(raw.inflacjaEnergii, searchDefaults.inflacjaEnergii),
+		lat: num(raw.lat, searchDefaults.lat),
+		lon: num(raw.lon, searchDefaults.lon),
+	}),
+});
 
 function App() {
 	const getSolarSummary = useServerFn(fetchSolarSummary);
-	const [communeSize, setCommuneSize] = useState<CommuneType>(
-		CommuneType.SMALL,
+	const search = Route.useSearch();
+	const router = useRouter();
+
+	const setParam = useCallback(
+		<K extends keyof SearchParams>(key: K, value: SearchParams[K]) => {
+			router.navigate({
+				to: "/",
+				search: (prev) => ({ ...searchDefaults, ...prev, [key]: value }),
+				replace: true,
+				resetScroll: false,
+			});
+		},
+		[router],
 	);
-	const [donation, setDonation] = useState<number>(0);
-	const [pvPower, setPvPower] = useState<number>(10);
-	const [storageEnabled, setStorageEnabled] = useState<boolean>(false);
-	// Percent of storage capacity relative to PV power (0-100)
-	const [storagePct, setStoragePct] = useState<number>(50);
-	// Parametry techniczne
-	const [degradacja, setDegradacja] = useState<number>(0.5);
-	const [katNachylenia, setKatNachylenia] = useState<number>(35);
-	// Parametry rynkowe
-	const [cenaEnergii, setCenaEnergii] = useState<number>(0.85);
-	const [cenaSprzedazy, setCenaSprzedazy] = useState<number>(0.4);
-	const [inflacjaEnergii, setInflacjaEnergii] = useState<number>(3);
-	const [lat, setLat] = useState<number>(52.2297);
+
+	const {
+		communeSize,
+		donation,
+		pvPower,
+		storageEnabled,
+		storagePct,
+		degradacja,
+		katNachylenia,
+		cenaEnergii,
+		cenaSprzedazy,
+		inflacjaEnergii,
+		lat,
+		lon,
+	} = search;
 
 	// Estimated storage capacity in kWh derived from PV power and percent
 	const storageCapacity = Math.round(((pvPower * storagePct) / 100) * 10) / 10;
-	const [lon, setLon] = useState<number>(21.0122);
 	const mapDialogRef = useRef<HTMLDialogElement>(null);
 	const [mapDialogOpen, setMapDialogOpen] = useState(false);
 	type SolarMapProps = {
@@ -69,12 +109,12 @@ function App() {
 		};
 	}, []);
 
-	const {
-		data: solarData,
-	} = useQuery({
+	const { data: solarData } = useQuery({
 		queryKey: ["solar", lat, lon, pvPower, katNachylenia],
 		queryFn: () => {
-			return getSolarSummary({ data: { lat, lon, pvPower, angle: katNachylenia } });
+			return getSolarSummary({
+				data: { lat, lon, pvPower, angle: katNachylenia },
+			});
 		},
 		placeholderData: keepPreviousData,
 		staleTime: 60 * 60 * 1000, // 60 minut
@@ -125,14 +165,16 @@ function App() {
 				<details className="group mt-6 rounded-xl border border-(--chip-line) bg-(--chip-bg)">
 					<summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-(--sea-ink) list-none flex items-center justify-between">
 						Parametry gminy
-						<span className="text-(--lagoon-deep) text-xs group-open:rotate-180 transition-transform">▾</span>
+						<span className="text-(--lagoon-deep) text-xs group-open:rotate-180 transition-transform">
+							▾
+						</span>
 					</summary>
 					<div className="flex flex-col gap-4 px-4 pb-4 pt-2">
 						<Select
 							id="communeSize"
 							label="Rozmiar gminy"
 							value={communeSize}
-							onChange={setCommuneSize}
+							onChange={(v) => setParam("communeSize", v)}
 							options={[
 								{ value: CommuneType.SMALL, label: "Mała (< 10 000)" },
 								{ value: CommuneType.MEDIUM, label: "Średnia (10 000–50 000)" },
@@ -159,14 +201,16 @@ function App() {
 						<details className="group rounded-xl border border-(--chip-line) bg-(--chip-bg)">
 							<summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-(--sea-ink) list-none flex items-center justify-between">
 								Współrzędne (ręczne)
-								<span className="text-(--lagoon-deep) text-xs group-open:rotate-180 transition-transform">▾</span>
+								<span className="text-(--lagoon-deep) text-xs group-open:rotate-180 transition-transform">
+									▾
+								</span>
 							</summary>
 							<div className="px-4 pb-4 pt-1">
 								<LatLonInput
 									lat={lat}
 									lon={lon}
-									onLatChange={setLat}
-									onLonChange={setLon}
+									onLatChange={(v) => setParam("lat", v)}
+									onLonChange={(v) => setParam("lon", v)}
 								/>
 							</div>
 						</details>
@@ -176,13 +220,15 @@ function App() {
 				<details className="group mt-3 rounded-xl border border-(--chip-line) bg-(--chip-bg)">
 					<summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-(--sea-ink) list-none flex items-center justify-between">
 						Parametry techniczne
-						<span className="text-(--lagoon-deep) text-xs group-open:rotate-180 transition-transform">▾</span>
+						<span className="text-(--lagoon-deep) text-xs group-open:rotate-180 transition-transform">
+							▾
+						</span>
 					</summary>
 					<div className="flex flex-col gap-4 px-4 pb-4 pt-2">
 						<NumberInput
 							label="Moc instalacji (kWp)"
 							value={pvPower}
-							onChange={setPvPower}
+							onChange={(v) => setParam("pvPower", v)}
 							validator={valibotValidator(getPvPowerSchema(communeSize))}
 							min={0}
 							max={500}
@@ -192,7 +238,7 @@ function App() {
 						<NumberInput
 							label="Kąt nachylenia paneli (°)"
 							value={katNachylenia}
-							onChange={setKatNachylenia}
+							onChange={(v) => setParam("katNachylenia", v)}
 							min={0}
 							max={90}
 							step={1}
@@ -203,7 +249,7 @@ function App() {
 						<NumberInput
 							label="Degradacja paneli r/r (%)"
 							value={degradacja}
-							onChange={setDegradacja}
+							onChange={(v) => setParam("degradacja", v)}
 							min={0}
 							max={2}
 							step={0.1}
@@ -212,20 +258,18 @@ function App() {
 							name="degradacja"
 							id="degradacja"
 						/>
-						<div>
-							<Toggle
-								label="Użyć magazynu energii"
-								checked={storageEnabled}
-								onChange={setStorageEnabled}
-								name="storageEnabled"
-							/>
-						</div>
+						<Toggle
+							label="Użyć magazynu energii"
+							checked={storageEnabled}
+							onChange={(v) => setParam("storageEnabled", v)}
+							name="storageEnabled"
+						/>
 						{storageEnabled ? (
 							<>
 								<NumberInput
 									label="% pojemności magazynu względem mocy PV"
 									value={storagePct}
-									onChange={setStoragePct}
+									onChange={(v) => setParam("storagePct", v)}
 									min={0}
 									max={100}
 									step={1}
@@ -244,13 +288,15 @@ function App() {
 				<details className="group mt-3 rounded-xl border border-(--chip-line) bg-(--chip-bg)">
 					<summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-(--sea-ink) list-none flex items-center justify-between">
 						Parametry rynkowe
-						<span className="text-(--lagoon-deep) text-xs group-open:rotate-180 transition-transform">▾</span>
+						<span className="text-(--lagoon-deep) text-xs group-open:rotate-180 transition-transform">
+							▾
+						</span>
 					</summary>
 					<div className="flex flex-col gap-4 px-4 pb-4 pt-2">
 						<NumberInput
 							label="Dofinansowanie (%)"
 							value={donation}
-							onChange={setDonation}
+							onChange={(v) => setParam("donation", v)}
 							min={0}
 							max={100}
 							step={1}
@@ -262,7 +308,7 @@ function App() {
 						<NumberInput
 							label="Cena energii z sieci (PLN/kWh)"
 							value={cenaEnergii}
-							onChange={setCenaEnergii}
+							onChange={(v) => setParam("cenaEnergii", v)}
 							min={0.1}
 							max={3}
 							step={0.01}
@@ -274,7 +320,7 @@ function App() {
 						<NumberInput
 							label="Cena sprzedaży nadwyżek (PLN/kWh)"
 							value={cenaSprzedazy}
-							onChange={setCenaSprzedazy}
+							onChange={(v) => setParam("cenaSprzedazy", v)}
 							min={0}
 							max={3}
 							step={0.01}
@@ -286,7 +332,7 @@ function App() {
 						<NumberInput
 							label="Inflacja ceny energii (%/rok)"
 							value={inflacjaEnergii}
-							onChange={setInflacjaEnergii}
+							onChange={(v) => setParam("inflacjaEnergii", v)}
 							min={0}
 							max={15}
 							step={0.5}
@@ -329,8 +375,17 @@ function App() {
 						centerLat={lat}
 						centerLon={lon}
 						onLocationSelect={(newLat, lng) => {
-							setLat(newLat);
-							setLon(lng);
+							router.navigate({
+								to: "/",
+								search: (prev) => ({
+									...searchDefaults,
+									...prev,
+									lat: newLat,
+									lon: lng,
+								}),
+								replace: true,
+								resetScroll: false,
+							});
 							closeMap();
 						}}
 					/>

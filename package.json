@@ -5,6 +5,9 @@
   "imports": {
     "#/*": "./src/*"
   },
+  "engines": {
+    "node": "v24.14.0"
+  },
   "scripts": {
     "dev": "vite dev --port 3000",
     "build": "vite build",

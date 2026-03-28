@@ -1,11 +1,10 @@
-import type { Dispatch, SetStateAction } from "react";
 import NumberInput from "./NumberInput";
 
 type LatLonInputProps = {
 	lat: number;
 	lon: number;
-	onLatChange: Dispatch<SetStateAction<number>>;
-	onLonChange: Dispatch<SetStateAction<number>>;
+	onLatChange: (n: number) => void;
+	onLonChange: (n: number) => void;
 };
 
 export default function LatLonInput({

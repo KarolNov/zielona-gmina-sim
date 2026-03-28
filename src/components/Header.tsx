@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { searchDefaults } from '#/lib/search-params'
 import ThemeToggle from './ThemeToggle'
 
 export default function Header() {
@@ -8,6 +9,7 @@ export default function Header() {
         <h2 className="m-0 shrink-0 text-base font-semibold tracking-tight">
           <Link
             to="/"
+            search={(prev) => ({ ...searchDefaults, ...prev })}
             className="inline-flex items-center gap-2 rounded-full border border-(--chip-line) bg-(--chip-bg) px-3 py-1.5 text-sm text-(--sea-ink) no-underline shadow-[0_8px_24px_rgba(30,90,72,0.08)] sm:px-4 sm:py-2"
           >
             <span className="h-2 w-2 rounded-full" style={{background: 'linear-gradient(90deg,#9ddf7a,#1f8a3d)'}} />
@@ -18,6 +20,7 @@ export default function Header() {
         <div className="flex w-full flex-wrap items-center gap-x-4 gap-y-1 pb-1 text-sm font-semibold sm:w-auto sm:flex-nowrap sm:pb-0">
           <Link
             to="/"
+            search={(prev) => ({ ...searchDefaults, ...prev })}
             className="nav-link"
             activeProps={{ className: 'nav-link is-active' }}
           >
