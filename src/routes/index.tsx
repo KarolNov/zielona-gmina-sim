@@ -33,6 +33,7 @@ function App() {
 	const [storagePct, setStoragePct] = useState<number>(50);
 	// Parametry techniczne
 	const [degradacja, setDegradacja] = useState<number>(0.5);
+	const [katNachylenia, setKatNachylenia] = useState<number>(35);
 	// Parametry rynkowe
 	const [cenaEnergii, setCenaEnergii] = useState<number>(0.85);
 	const [cenaSprzedazy, setCenaSprzedazy] = useState<number>(0.4);
@@ -107,9 +108,23 @@ function App() {
 					pobierane automatycznie po aktualizacji danych.
 				</p>
 
-				<div className="mt-6 grid gap-4 md:grid-cols-2">
-					{/* Left column: location */}
-					<div className="flex flex-col gap-4">
+				<details className="group mt-6 rounded-xl border border-(--chip-line) bg-(--chip-bg)">
+					<summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-(--sea-ink) list-none flex items-center justify-between">
+						Parametry gminy
+						<span className="text-(--lagoon-deep) text-xs group-open:rotate-180 transition-transform">▾</span>
+					</summary>
+					<div className="flex flex-col gap-4 px-4 pb-4 pt-2">
+						<Select
+							id="communeSize"
+							label="Rozmiar gminy"
+							value={communeSize}
+							onChange={setCommuneSize}
+							options={[
+								{ value: CommuneType.SMALL, label: "Mała (< 10 000)" },
+								{ value: CommuneType.MEDIUM, label: "Średnia (10 000–50 000)" },
+								{ value: CommuneType.LARGE, label: "Duża (> 50 000)" },
+							]}
+						/>
 						<div>
 							<button
 								type="button"
@@ -127,7 +142,6 @@ function App() {
 								</div>
 							</button>
 						</div>
-
 						<details className="group rounded-xl border border-(--chip-line) bg-(--chip-bg)">
 							<summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-(--sea-ink) list-none flex items-center justify-between">
 								Współrzędne (ręczne)
@@ -143,21 +157,14 @@ function App() {
 							</div>
 						</details>
 					</div>
+				</details>
 
-					{/* Right column: installation params */}
-					<div className="flex flex-col gap-4">
-						<Select
-							id="communeSize"
-							label="Rozmiar gminy"
-							value={communeSize}
-							onChange={setCommuneSize}
-							options={[
-								{ value: CommuneType.SMALL, label: "Mała (< 10 000)" },
-								{ value: CommuneType.MEDIUM, label: "Średnia (10 000–50 000)" },
-								{ value: CommuneType.LARGE, label: "Duża (> 50 000)" },
-							]}
-						/>
-
+				<details className="group mt-3 rounded-xl border border-(--chip-line) bg-(--chip-bg)">
+					<summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-(--sea-ink) list-none flex items-center justify-between">
+						Parametry techniczne
+						<span className="text-(--lagoon-deep) text-xs group-open:rotate-180 transition-transform">▾</span>
+					</summary>
+					<div className="flex flex-col gap-4 px-4 pb-4 pt-2">
 						<NumberInput
 							label="Moc instalacji (kWp)"
 							value={pvPower}
@@ -168,61 +175,17 @@ function App() {
 							step={1}
 							name="pvPower"
 						/>
-
-						<details className="group rounded-xl border border-(--chip-line) bg-(--chip-bg)">
-							<summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-(--sea-ink) list-none flex items-center justify-between">
-								Dodatkowe parametry
-								<span className="text-(--lagoon-deep) text-xs group-open:rotate-180 transition-transform">▾</span>
-							</summary>
-							<div className="flex flex-col gap-4 px-4 pb-4 pt-2">
-								<NumberInput
-									label="Dofinansowanie (%)"
-									value={donation}
-									onChange={setDonation}
-									min={0}
-									max={100}
-									step={1}
-									decimal={2}
-									validator={valibotValidator(donationSchema)}
-									name="donationPct"
-									id="donationPct"
-								/>
-
-								<div>
-									<Toggle
-										label="Użyć magazynu energii"
-										checked={storageEnabled}
-										onChange={setStorageEnabled}
-										name="storageEnabled"
-									/>
-								</div>
-
-								{storageEnabled ? (
-									<>
-										<NumberInput
-											label="% pojemności magazynu względem mocy PV"
-											value={storagePct}
-											onChange={setStoragePct}
-											min={0}
-											max={100}
-											step={1}
-											decimal={0}
-											name="storagePct"
-											id="storagePct"
-										/>
-										<div className="text-sm text-(--sea-ink-soft)">
-											Szacowana pojemność: {storageCapacity} kWh
-										</div>
-									</>
-								) : null}
-							</div>
-						</details>
-					</div>
-				</div>
-
-				<div className="mt-8 grid gap-8 md:grid-cols-2">
-					<div className="flex flex-col gap-4">
-						<p className="island-kicker">Parametry techniczne</p>
+						<NumberInput
+							label="Kąt nachylenia paneli (°)"
+							value={katNachylenia}
+							onChange={setKatNachylenia}
+							min={0}
+							max={90}
+							step={1}
+							decimal={0}
+							name="katNachylenia"
+							id="katNachylenia"
+						/>
 						<NumberInput
 							label="Degradacja paneli r/r (%)"
 							value={degradacja}
@@ -235,10 +198,53 @@ function App() {
 							name="degradacja"
 							id="degradacja"
 						/>
+						<div>
+							<Toggle
+								label="Użyć magazynu energii"
+								checked={storageEnabled}
+								onChange={setStorageEnabled}
+								name="storageEnabled"
+							/>
+						</div>
+						{storageEnabled ? (
+							<>
+								<NumberInput
+									label="% pojemności magazynu względem mocy PV"
+									value={storagePct}
+									onChange={setStoragePct}
+									min={0}
+									max={100}
+									step={1}
+									decimal={0}
+									name="storagePct"
+									id="storagePct"
+								/>
+								<div className="text-sm text-(--sea-ink-soft)">
+									Szacowana pojemność: {storageCapacity} kWh
+								</div>
+							</>
+						) : null}
 					</div>
+				</details>
 
-					<div className="flex flex-col gap-4">
-						<p className="island-kicker">Parametry rynkowe</p>
+				<details className="group mt-3 rounded-xl border border-(--chip-line) bg-(--chip-bg)">
+					<summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-(--sea-ink) list-none flex items-center justify-between">
+						Parametry rynkowe
+						<span className="text-(--lagoon-deep) text-xs group-open:rotate-180 transition-transform">▾</span>
+					</summary>
+					<div className="flex flex-col gap-4 px-4 pb-4 pt-2">
+						<NumberInput
+							label="Dofinansowanie (%)"
+							value={donation}
+							onChange={setDonation}
+							min={0}
+							max={100}
+							step={1}
+							decimal={2}
+							validator={valibotValidator(donationSchema)}
+							name="donationPct"
+							id="donationPct"
+						/>
 						<NumberInput
 							label="Cena energii z sieci (PLN/kWh)"
 							value={cenaEnergii}
@@ -276,7 +282,7 @@ function App() {
 							id="inflacjaEnergii"
 						/>
 					</div>
-				</div>
+				</details>
 			</section>
 
 			{/* Map modal */}
