@@ -71,11 +71,10 @@ function App() {
 
 	const {
 		data: solarData,
-		// refetch: refetchSolar,
 	} = useQuery({
-		queryKey: ["solar", lat, lon, pvPower],
+		queryKey: ["solar", lat, lon, pvPower, katNachylenia],
 		queryFn: () => {
-			return getSolarSummary({ data: { lat, lon, pvPower } });
+			return getSolarSummary({ data: { lat, lon, pvPower, angle: katNachylenia } });
 		},
 		placeholderData: keepPreviousData,
 		staleTime: 60 * 60 * 1000, // 60 minut
