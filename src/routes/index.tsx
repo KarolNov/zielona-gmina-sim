@@ -44,7 +44,12 @@ function App() {
 	const storageCapacity = Math.round(((pvPower * storagePct) / 100) * 10) / 10;
 	const [lon, setLon] = useState<number>(21.0122);
 	const mapDialogRef = useRef<HTMLDialogElement>(null);
-	type SolarMapProps = { onLocationSelect: (lat: number, lng: number) => void };
+	const [mapDialogOpen, setMapDialogOpen] = useState(false);
+	type SolarMapProps = {
+		onLocationSelect: (lat: number, lng: number) => void;
+		centerLat: number;
+		centerLon: number;
+	};
 	const [SolarMapComponent, setSolarMapComponent] =
 		useState<ComponentType<SolarMapProps> | null>(null);
 
@@ -78,6 +83,16 @@ function App() {
 
 	// Suppress unused variable warning — solarData will be used in charts later
 	void solarData;
+
+	const openMap = () => {
+		mapDialogRef.current?.showModal();
+		setMapDialogOpen(true);
+	};
+
+	const closeMap = () => {
+		mapDialogRef.current?.close();
+		setMapDialogOpen(false);
+	};
 
 	return (
 		<main className="page-wrap px-4 pb-8 pt-14">
@@ -128,7 +143,7 @@ function App() {
 						<div>
 							<button
 								type="button"
-								onClick={() => mapDialogRef.current?.showModal()}
+								onClick={openMap}
 								className="flex w-full items-center gap-3 rounded-xl border border-(--chip-line) bg-(--chip-bg) px-4 py-3 text-left transition hover:border-(--lagoon-deep) hover:bg-(--foam) cursor-pointer"
 							>
 								<MapPin className="h-5 w-5 shrink-0 text-(--lagoon-deep)" />
@@ -285,15 +300,15 @@ function App() {
 				</details>
 			</section>
 
-			{/* Map modal */}
+			{/* Map modal — rendered outside <section> so dialog backdrop covers full page */}
 			{/* biome-ignore lint/a11y/useKeyWithClickEvents: dialog handles Escape natively */}
 			<dialog
 				ref={mapDialogRef}
-				className="island-shell w-full max-w-2xl rounded-2xl p-4 backdrop:bg-black/50"
+				className="island-shell m-auto w-full max-w-2xl rounded-2xl p-4 backdrop:bg-black/50"
 				onClick={(e) => {
-					// Close when clicking the backdrop (outside the dialog box itself)
-					if (e.target === e.currentTarget) mapDialogRef.current?.close();
+					if (e.target === e.currentTarget) closeMap();
 				}}
+				onClose={() => setMapDialogOpen(false)}
 			>
 				<div className="mb-3 flex items-center justify-between">
 					<span className="text-sm font-semibold text-(--sea-ink)">
@@ -301,19 +316,23 @@ function App() {
 					</span>
 					<button
 						type="button"
-						onClick={() => mapDialogRef.current?.close()}
+						onClick={closeMap}
 						className="rounded-lg p-1 text-(--sea-ink-soft) hover:text-(--sea-ink) transition-colors cursor-pointer"
 						aria-label="Zamknij"
 					>
 						<X className="h-5 w-5" />
 					</button>
 				</div>
-				{SolarMapComponent ? (
+				{/* Mount map only when dialog is open — Leaflet needs a visible container
+				    to correctly calculate tile bounds and map size */}
+				{mapDialogOpen && SolarMapComponent ? (
 					<SolarMapComponent
+						centerLat={lat}
+						centerLon={lon}
 						onLocationSelect={(newLat, lng) => {
 							setLat(newLat);
 							setLon(lng);
-							mapDialogRef.current?.close();
+							closeMap();
 						}}
 					/>
 				) : (

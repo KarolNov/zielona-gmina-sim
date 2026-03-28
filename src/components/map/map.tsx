@@ -40,14 +40,14 @@ function MapController({
 	return null;
 }
 
-const latLngBounds = new LatLngBounds([
-	[49.0, 14.07], // Southwest corner of Poland
-	[54.5, 24.09], // Northeast corner of Poland
-]);
 export default function SolarMap({
 	onLocationSelect,
+	centerLat,
+	centerLon,
 }: {
 	onLocationSelect: (lat: number, lng: number) => void;
+	centerLat: number;
+	centerLon: number;
 }) {
 	if (typeof window === "undefined") {
 		return (
@@ -57,8 +57,15 @@ export default function SolarMap({
 		);
 	}
 	return (
-		<MapContainer bounds={latLngBounds} className="h-100 w-full rounded-lg">
-			<TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+		<MapContainer
+			center={[centerLat, centerLon]}
+			zoom={10}
+			className="h-100 w-full rounded-lg"
+		>
+			<TileLayer
+				url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+				attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+			/>
 			<MapController onLocationChange={onLocationSelect} />
 		</MapContainer>
 	);
