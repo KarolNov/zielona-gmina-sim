@@ -1,8 +1,8 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { type ComponentType, useEffect, useState } from "react";
-import { SolarSeasonalChart } from "#/components/charts/solar-averages-chart";
+import { MapPin, X } from "lucide-react";
+import { type ComponentType, useEffect, useRef, useState } from "react";
 // SolarMap uses Leaflet which references `window`. To avoid SSR errors we
 // dynamically import the component on the client only (see below).
 import { fetchSolarSummary } from "#/lib/fetch";
@@ -42,6 +42,7 @@ function App() {
 	// Estimated storage capacity in kWh derived from PV power and percent
 	const storageCapacity = Math.round(((pvPower * storagePct) / 100) * 10) / 10;
 	const [lon, setLon] = useState<number>(21.0122);
+	const mapDialogRef = useRef<HTMLDialogElement>(null);
 	type SolarMapProps = { onLocationSelect: (lat: number, lng: number) => void };
 	const [SolarMapComponent, setSolarMapComponent] =
 		useState<ComponentType<SolarMapProps> | null>(null);
@@ -64,8 +65,6 @@ function App() {
 
 	const {
 		data: solarData,
-		isFetching: solarLoading,
-		error: solarError,
 		// refetch: refetchSolar,
 	} = useQuery({
 		queryKey: ["solar", lat, lon, pvPower],
@@ -75,6 +74,9 @@ function App() {
 		placeholderData: keepPreviousData,
 		staleTime: 60 * 60 * 1000, // 60 minut
 	});
+
+	// Suppress unused variable warning — solarData will be used in charts later
+	void solarData;
 
 	return (
 		<main className="page-wrap px-4 pb-8 pt-14">
@@ -106,27 +108,43 @@ function App() {
 				</p>
 
 				<div className="mt-6 grid gap-4 md:grid-cols-2">
-					<div>
-						<div className="mb-4">
-							{SolarMapComponent ? (
-								<SolarMapComponent
-									onLocationSelect={(lat, lng) => {
-										setLat(lat);
-										setLon(lng);
-									}}
-								/>
-							) : (
-								// Placeholder while the client-only map component loads
-								<div className="h-100 w-full rounded-lg bg-gray-200 flex items-center justify-center"></div>
-							)}
+					{/* Left column: location */}
+					<div className="flex flex-col gap-4">
+						<div>
+							<button
+								type="button"
+								onClick={() => mapDialogRef.current?.showModal()}
+								className="flex w-full items-center gap-3 rounded-xl border border-(--chip-line) bg-(--chip-bg) px-4 py-3 text-left transition hover:border-(--lagoon-deep) hover:bg-(--foam) cursor-pointer"
+							>
+								<MapPin className="h-5 w-5 shrink-0 text-(--lagoon-deep)" />
+								<div>
+									<div className="text-sm font-semibold text-(--sea-ink)">
+										Lokalizacja
+									</div>
+									<div className="text-xs text-(--sea-ink-soft)">
+										{lat.toFixed(4)}°N, {lon.toFixed(4)}°E — kliknij aby zmienić
+									</div>
+								</div>
+							</button>
 						</div>
-						<LatLonInput
-							lat={lat}
-							lon={lon}
-							onLatChange={setLat}
-							onLonChange={setLon}
-						/>
+
+						<details className="group rounded-xl border border-(--chip-line) bg-(--chip-bg)">
+							<summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-(--sea-ink) list-none flex items-center justify-between">
+								Współrzędne (ręczne)
+								<span className="text-(--lagoon-deep) text-xs group-open:rotate-180 transition-transform">▾</span>
+							</summary>
+							<div className="px-4 pb-4 pt-1">
+								<LatLonInput
+									lat={lat}
+									lon={lon}
+									onLatChange={setLat}
+									onLonChange={setLon}
+								/>
+							</div>
+						</details>
 					</div>
+
+					{/* Right column: installation params */}
 					<div className="flex flex-col gap-4">
 						<Select
 							id="communeSize"
@@ -141,19 +159,6 @@ function App() {
 						/>
 
 						<NumberInput
-							label="Dofinansowanie (%)"
-							value={donation}
-							onChange={setDonation}
-							min={0}
-							max={100}
-							step={1}
-							decimal={2}
-							validator={valibotValidator(donationSchema)}
-							name="donationPct"
-							id="donationPct"
-						/>
-
-						<NumberInput
 							label="Moc instalacji (kWp)"
 							value={pvPower}
 							onChange={setPvPower}
@@ -164,49 +169,55 @@ function App() {
 							name="pvPower"
 						/>
 
-						<div>
-							<Toggle
-								label="Użyć magazynu energii"
-								checked={storageEnabled}
-								onChange={setStorageEnabled}
-								name="storageEnabled"
-							/>
-						</div>
-
-						{storageEnabled ? (
-							<>
+						<details className="group rounded-xl border border-(--chip-line) bg-(--chip-bg)">
+							<summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-(--sea-ink) list-none flex items-center justify-between">
+								Dodatkowe parametry
+								<span className="text-(--lagoon-deep) text-xs group-open:rotate-180 transition-transform">▾</span>
+							</summary>
+							<div className="flex flex-col gap-4 px-4 pb-4 pt-2">
 								<NumberInput
-									label="% pojemności magazynu względem mocy PV"
-									value={storagePct}
-									onChange={setStoragePct}
+									label="Dofinansowanie (%)"
+									value={donation}
+									onChange={setDonation}
 									min={0}
 									max={100}
 									step={1}
-									decimal={0}
-									name="storagePct"
-									id="storagePct"
+									decimal={2}
+									validator={valibotValidator(donationSchema)}
+									name="donationPct"
+									id="donationPct"
 								/>
-								<div className="text-sm text-(--sea-ink-soft)">
-									Szacowana pojemność: {storageCapacity} kWh
+
+								<div>
+									<Toggle
+										label="Użyć magazynu energii"
+										checked={storageEnabled}
+										onChange={setStorageEnabled}
+										name="storageEnabled"
+									/>
 								</div>
-							</>
-						) : null}
+
+								{storageEnabled ? (
+									<>
+										<NumberInput
+											label="% pojemności magazynu względem mocy PV"
+											value={storagePct}
+											onChange={setStoragePct}
+											min={0}
+											max={100}
+											step={1}
+											decimal={0}
+											name="storagePct"
+											id="storagePct"
+										/>
+										<div className="text-sm text-(--sea-ink-soft)">
+											Szacowana pojemność: {storageCapacity} kWh
+										</div>
+									</>
+								) : null}
+							</div>
+						</details>
 					</div>
-				</div>
-
-				<div className="mt-6 w-full h-fit">
-					{solarData && (
-						<SolarSeasonalChart
-							apiResponse={solarData}
-							isRefetching={solarLoading}
-						/>
-					)}
-
-					{solarError ? (
-						<div className="sm:col-span-2 text-sm text-red-600">
-							{solarError.message ?? String(solarError)}
-						</div>
-					) : null}
 				</div>
 
 				<div className="mt-8 grid gap-8 md:grid-cols-2">
@@ -267,6 +278,44 @@ function App() {
 					</div>
 				</div>
 			</section>
+
+			{/* Map modal */}
+			{/* biome-ignore lint/a11y/useKeyWithClickEvents: dialog handles Escape natively */}
+			<dialog
+				ref={mapDialogRef}
+				className="island-shell w-full max-w-2xl rounded-2xl p-4 backdrop:bg-black/50"
+				onClick={(e) => {
+					// Close when clicking the backdrop (outside the dialog box itself)
+					if (e.target === e.currentTarget) mapDialogRef.current?.close();
+				}}
+			>
+				<div className="mb-3 flex items-center justify-between">
+					<span className="text-sm font-semibold text-(--sea-ink)">
+						Wybierz lokalizację
+					</span>
+					<button
+						type="button"
+						onClick={() => mapDialogRef.current?.close()}
+						className="rounded-lg p-1 text-(--sea-ink-soft) hover:text-(--sea-ink) transition-colors cursor-pointer"
+						aria-label="Zamknij"
+					>
+						<X className="h-5 w-5" />
+					</button>
+				</div>
+				{SolarMapComponent ? (
+					<SolarMapComponent
+						onLocationSelect={(newLat, lng) => {
+							setLat(newLat);
+							setLon(lng);
+							mapDialogRef.current?.close();
+						}}
+					/>
+				) : (
+					<div className="h-100 w-full rounded-lg bg-gray-200 flex items-center justify-center text-sm text-gray-500">
+						Ładowanie mapy…
+					</div>
+				)}
+			</dialog>
 
 			<section className="island-shell mt-8 rounded-2xl p-6">
 				<p className="island-kicker mb-2">Jak korzystać?</p>
