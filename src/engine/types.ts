@@ -20,16 +20,18 @@ export interface SimulationInput {
   storageCapacity: number;
   /** Rozmiar gminy */
   communeSize: CommuneType;
-  /**
-   * Miesieczne uzyski z PVGIS (tablica 12 elementow, kWh).
-   * Juz przeskalowane dla zadanej mocy i kata nachylenia.
-   */
+  /** Miesieczne uzyski z PVGIS (tablica 12 elementow, kWh) */
   monthlyYields: number[];
-  /**
-   * Roczny uzysk z PVGIS (kWh).
-   * Juz przeskalowany dla zadanej mocy i kata nachylenia.
-   */
+  /** Roczny uzysk z PVGIS (kWh) */
   annualYield: number;
+  /** Czy finansowanie kredytem jest wlaczone */
+  loanEnabled: boolean;
+  /** Roczna stopa procentowa kredytu jako ulamek dziesietny (np. 0.07 = 7%) */
+  loanRate: number;
+  /** Okres kredytu w latach */
+  loanTerm: number;
+  /** Jaki procent wkladu wlasnego (CAPEX po dotacji) jest finansowany kredytem (0-100) */
+  loanShare: number;
 }
 
 /** Produkcja miesiecy dla pojedynczego roku */
@@ -46,62 +48,44 @@ export interface MonthlyProduction {
 
 /** Pojedynczy wiersz tabeli cash flow rok po roku */
 export interface AnnualCashFlowRow {
-  /** Rok projektu (0 = inwestycja) */
   year: number;
-  /** Calkowita wygenerowana energia (kWh) */
   energyGenerated: number;
-  /** Energia zuzyta na miejscu (kWh) */
   energySelfConsumed: number;
-  /** Energia wyeksportowana (kWh) */
   energyExported: number;
-  /** Oszczednosci z unikanego zakupu z sieci (PLN) */
   savings: number;
-  /** Przychod ze sprzedazy nadwyzek (PLN) */
   exportRevenue: number;
-  /** Koszty operacyjne w danym roku (PLN) */
   opex: number;
-  /** Przeplywy pieniezne netto w danym roku (PLN) */
+  /** Rata kredytu w danym roku (PLN), 0 jesli brak kredytu lub po splacie */
+  loanPayment: number;
   netCashFlow: number;
-  /** Skumulowane przeplywy pieniezne do danego roku (PLN) */
   cumulativeCashFlow: number;
-  /** Cena energii z sieci w danym roku po inflacji (PLN/kWh) */
   gridPrice: number;
-  /** Cena sprzedazy w danym roku po inflacji (PLN/kWh) */
   exportPrice: number;
 }
 
 /** Wynik CAPEX */
 export interface CapexResult {
-  /** Koszt instalacji PV (PLN) */
   pvCost: number;
-  /** Koszt magazynu energii (PLN) */
   storageCost: number;
-  /** Calkowity CAPEX (PLN) */
   totalCapex: number;
 }
 
-/** Pelne wyniki symulacji */
+/** Pelne wyniki symulacji — perspektywa wlasciciela (z kredytem gdy wlaczony) */
 export interface SimulationResult {
-  /** Calkowity CAPEX przed dotacja (PLN) */
   capex: number;
-  /** CAPEX po odliczeniu dotacji (PLN) */
   capexAfterSubsidy: number;
-  /** Koszt magazynu energii (PLN) */
   storageCost: number;
-  /** Roczny OPEX w pierwszym roku (PLN) */
   annualOpex: number;
-  /** Wspolczynnik autokonsumpcji (0..1) */
   autoconsumptionRate: number;
-  /** LCOE w PLN/kWh */
+  /** LCOE w PLN/kWh (uwzglednia koszty kredytu gdy wlaczony) */
   lcoe: number;
-  /** NPV w PLN */
   npv: number;
-  /** IRR jako ulamek dziesietny (np. 0.12 = 12%) */
   irr: number;
-  /** Prosty czas zwrotu w latach */
   paybackYears: number;
-  /** Tabela cash flow rok po roku */
+  /** Kwota kredytu (PLN), 0 jesli brak */
+  loanPrincipal: number;
+  /** Roczna rata kredytu (PLN), 0 jesli brak */
+  loanAnnualPayment: number;
   cashFlowTable: AnnualCashFlowRow[];
-  /** Produkcja miesieczna w pierwszym roku eksploatacji */
   monthlyProductionYear1: MonthlyProduction[];
 }

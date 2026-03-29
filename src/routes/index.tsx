@@ -9,8 +9,10 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { ResultsPanel } from "#/components/results/ResultsPanel";
 // SolarMap uses Leaflet which references `window`. To avoid SSR errors we
 // dynamically import the component on the client only (see below).
+import { runSimulation } from "#/engine";
 import { fetchSolarSummary } from "#/lib/fetch";
 import { num, type SearchParams, searchDefaults } from "#/lib/search-params";
 import { CommuneType } from "#/lib/types";
@@ -21,6 +23,14 @@ import { donationSchema } from "#/lib/validators/donation";
 import { inflacjaSchema } from "#/lib/validators/inflacja";
 import { getPvPowerSchema } from "#/lib/validators/pv-power";
 import { valibotValidator } from "#/lib/validators/valibot";
+import {
+	warnCenaEnergii,
+	warnCenaSprzedazy,
+	warnDegradacja,
+	warnDonation,
+	warnInflacja,
+	warnLoanRate,
+} from "#/lib/warnings";
 import LatLonInput from "../components/inputs/LatLonInput";
 import NumberInput from "../components/inputs/NumberInput";
 import Select from "../components/inputs/Select";
@@ -44,6 +54,10 @@ export const Route = createFileRoute("/")({
 		cenaEnergii: num(raw.cenaEnergii, searchDefaults.cenaEnergii),
 		cenaSprzedazy: num(raw.cenaSprzedazy, searchDefaults.cenaSprzedazy),
 		inflacjaEnergii: num(raw.inflacjaEnergii, searchDefaults.inflacjaEnergii),
+		loanEnabled: raw.loanEnabled === true || raw.loanEnabled === "true",
+		loanRate: num(raw.loanRate, searchDefaults.loanRate),
+		loanTerm: num(raw.loanTerm, searchDefaults.loanTerm),
+		loanShare: num(raw.loanShare, searchDefaults.loanShare),
 		lat: num(raw.lat, searchDefaults.lat),
 		lon: num(raw.lon, searchDefaults.lon),
 	}),
@@ -77,6 +91,10 @@ function App() {
 		cenaEnergii,
 		cenaSprzedazy,
 		inflacjaEnergii,
+		loanEnabled,
+		loanRate,
+		loanTerm,
+		loanShare,
 		lat,
 		lon,
 	} = search;
@@ -109,8 +127,9 @@ function App() {
 		};
 	}, []);
 
-	const { data: solarData } = useQuery({
+	const { refetch: refetchSolarData, isFetching: isFetchingSolarData } = useQuery({
 		queryKey: ["solar", lat, lon, pvPower, katNachylenia],
+		enabled: false,
 		queryFn: () => {
 			return getSolarSummary({
 				data: { lat, lon, pvPower, angle: katNachylenia },
@@ -118,10 +137,54 @@ function App() {
 		},
 		placeholderData: keepPreviousData,
 		staleTime: 60 * 60 * 1000, // 60 minut
+		gcTime: 5 * 60 * 1000, // 5 minut
 	});
 
-	// Suppress unused variable warning — solarData will be used in charts later
-	void solarData;
+	const [simulationResult, setSimulationResult] = useState<
+		import("#/engine").SimulationResult | null
+	>(null);
+
+	const runSim = useCallback(() => {
+		refetchSolarData({
+			cancelRefetch: true
+		}).then(({ data: solarData }) => {
+			if (!solarData) return;
+			setSimulationResult(
+				runSimulation({
+					pvPower,
+					degradacja: degradacja / 100,
+					cenaEnergii,
+					cenaSprzedazy,
+					inflacjaEnergii: inflacjaEnergii / 100,
+					donation,
+					storageEnabled,
+					storageCapacity: storageEnabled ? storageCapacity : 0,
+					communeSize,
+					monthlyYields: solarData.monthlyYields,
+					annualYield: solarData.annualYield,
+					loanEnabled,
+					loanRate: loanRate / 100,
+					loanTerm,
+					loanShare,
+				}),
+			);
+		});
+	}, [
+		refetchSolarData,
+		pvPower,
+		degradacja,
+		cenaEnergii,
+		cenaSprzedazy,
+		inflacjaEnergii,
+		donation,
+		storageEnabled,
+		storageCapacity,
+		communeSize,
+		loanEnabled,
+		loanRate,
+		loanTerm,
+		loanShare,
+	]);
 
 	const openMap = () => {
 		mapDialogRef.current?.showModal();
@@ -255,6 +318,7 @@ function App() {
 							step={0.1}
 							decimal={1}
 							validator={valibotValidator(degradacjaSchema)}
+							warning={warnDegradacja(degradacja)}
 							name="degradacja"
 							id="degradacja"
 						/>
@@ -302,6 +366,7 @@ function App() {
 							step={1}
 							decimal={2}
 							validator={valibotValidator(donationSchema)}
+							warning={warnDonation(donation)}
 							name="donationPct"
 							id="donationPct"
 						/>
@@ -314,6 +379,7 @@ function App() {
 							step={0.01}
 							decimal={2}
 							validator={valibotValidator(cenaEnergiiSchema)}
+							warning={warnCenaEnergii(cenaEnergii)}
 							name="cenaEnergii"
 							id="cenaEnergii"
 						/>
@@ -326,6 +392,7 @@ function App() {
 							step={0.01}
 							decimal={2}
 							validator={valibotValidator(cenaSprzedazySchema)}
+							warning={warnCenaSprzedazy(cenaSprzedazy, cenaEnergii)}
 							name="cenaSprzedazy"
 							id="cenaSprzedazy"
 						/>
@@ -338,9 +405,65 @@ function App() {
 							step={0.5}
 							decimal={1}
 							validator={valibotValidator(inflacjaSchema)}
+							warning={warnInflacja(inflacjaEnergii)}
 							name="inflacjaEnergii"
 							id="inflacjaEnergii"
 						/>
+					</div>
+				</details>
+
+				<details className="group mt-3 rounded-xl border border-(--chip-line) bg-(--chip-bg)">
+					<summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold text-(--sea-ink) list-none flex items-center justify-between">
+						Finansowanie
+						<span className="text-(--lagoon-deep) text-xs group-open:rotate-180 transition-transform">
+							▾
+						</span>
+					</summary>
+					<div className="flex flex-col gap-4 px-4 pb-4 pt-2">
+						<Toggle
+							label="Finansowanie kredytem"
+							checked={loanEnabled}
+							onChange={(v) => setParam("loanEnabled", v)}
+							name="loanEnabled"
+						/>
+						{loanEnabled ? (
+							<>
+								<NumberInput
+									label="Oprocentowanie kredytu (%)"
+									value={loanRate}
+									onChange={(v) => setParam("loanRate", v)}
+									min={0}
+									max={20}
+									step={0.5}
+									decimal={1}
+									warning={warnLoanRate(loanRate)}
+									name="loanRate"
+									id="loanRate"
+								/>
+								<NumberInput
+									label="Okres kredytu (lata)"
+									value={loanTerm}
+									onChange={(v) => setParam("loanTerm", v)}
+									min={1}
+									max={25}
+									step={1}
+									decimal={0}
+									name="loanTerm"
+									id="loanTerm"
+								/>
+								<NumberInput
+									label="% wkładu własnego finansowanego kredytem"
+									value={loanShare}
+									onChange={(v) => setParam("loanShare", v)}
+									min={0}
+									max={100}
+									step={5}
+									decimal={0}
+									name="loanShare"
+									id="loanShare"
+								/>
+							</>
+						) : null}
 					</div>
 				</details>
 			</section>
@@ -396,16 +519,20 @@ function App() {
 				)}
 			</dialog>
 
-			<section className="island-shell mt-8 rounded-2xl p-6">
-				<p className="island-kicker mb-2">Jak korzystać?</p>
-				<ul className="m-0 list-disc space-y-2 pl-5 text-sm text-(--sea-ink-soft)">
-					<li>
-						Wprowadź lokalizację i rozmiar gminy, procent dofinansowania, moc
-						PV.
-					</li>
-					<li>Później: wykresy, obliczenia ROI.</li>
-				</ul>
-			</section>
+			<div className="mt-6 flex justify-center">
+				<button
+					type="button"
+					disabled={isFetchingSolarData}
+					onClick={runSim}
+					className="cursor-pointer rounded-xl bg-(--lagoon-deep) px-8 py-3 text-base font-bold text-white shadow-lg transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+				>
+					{isFetchingSolarData ? "Pobieranie danych…" : "Uruchom symulację"}
+				</button>
+			</div>
+
+			{simulationResult && (
+				<ResultsPanel result={simulationResult} cenaEnergii={cenaEnergii} />
+			)}
 		</main>
 	);
 }

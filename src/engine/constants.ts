@@ -11,17 +11,17 @@ export const DISCOUNT_RATE = 0.06;
  * Wieksze instalacje maja nizszy koszt jednostkowy (ekonomia skali).
  */
 export const CAPEX_TIERS = [
-  { maxKwp: 10, costPerKwp: 5500 },
-  { maxKwp: 50, costPerKwp: 5000 },
-  { maxKwp: 200, costPerKwp: 4500 },
-  { maxKwp: Infinity, costPerKwp: 4000 },
+  { maxKwp: 10, costPerKwp: 4000 },
+  { maxKwp: 50, costPerKwp: 3500 },
+  { maxKwp: 200, costPerKwp: 3200 },
+  { maxKwp: Infinity, costPerKwp: 2800 },
 ] as const;
 
-/** Koszt magazynu energii za kWh pojemnosci (PLN/kWh) */
-export const STORAGE_COST_PER_KWH = 2500;
+/** Koszt magazynu energii za kWh pojemnosci (PLN/kWh) — ceny 2025/2026 */
+export const STORAGE_COST_PER_KWH = 2000;
 
-/** OPEX jako ulamek CAPEX rocznie (1.5%) */
-export const OPEX_RATE = 0.015;
+/** OPEX jako ulamek CAPEX rocznie (1%) */
+export const OPEX_RATE = 0.01;
 
 /** Roczna eskalacja kosztow OPEX (2%) */
 export const OPEX_ESCALATION = 0.02;
@@ -39,8 +39,13 @@ export const BASE_AUTOCONSUMPTION: Record<CommuneType, number> = {
 /**
  * Ile punktow procentowych autokonsumpcji dodaje kazdy kWh magazynu
  * na 1 kWp mocy zainstalowanej.
+ *
+ * Wartosc 0.20 oznacza, ze magazyn o pojemnosci 0.5 kWh/kWp
+ * podnosi autokonsumpcje o ~10pp, a 1.0 kWh/kWp o ~20pp.
+ * Odzwierciedla przesuwanie zuzycia na godziny wieczorne/nocne
+ * (peak shaving, time-of-use arbitrage).
  */
-export const STORAGE_AUTOCONSUMPTION_BOOST_PER_KWH_PER_KWP = 0.08;
+export const STORAGE_AUTOCONSUMPTION_BOOST_PER_KWH_PER_KWP = 0.20;
 
 /** Maksymalny wspolczynnik autokonsumpcji (cap) */
 export const MAX_AUTOCONSUMPTION = 0.9;

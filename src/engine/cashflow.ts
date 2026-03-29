@@ -6,40 +6,34 @@ import type { AnnualCashFlowRow, SimulationInput } from "./types";
 /**
  * Generuje tabele przeplywow pienieznych rok po roku na caly okres zycia projektu.
  *
- * Struktura:
- * - Rok 0: wyplyw CAPEX (po dotacji), brak produkcji
- * - Rok 1..n: oszczednosci z autokonsumpcji + przychod z eksportu - OPEX
+ * Tabela uwzglednia perspektywe wlasciciela:
+ * - Rok 0: wyplyw wkladu wlasnego (CAPEX po dotacji minus czesc kredytowana)
+ * - Rok 1..n: oszczednosci + eksport - OPEX - rata kredytu
  *
- * Uwzglednia:
- * - Degradacje paneli (malejaca produkcja r/r)
- * - Inflacje cen energii (rosnace ceny zakupu i sprzedazy r/r)
- * - Eskalacje OPEX
- * - Kumulatywny cash flow do okreslenia PBP
- *
- * @param input - Parametry symulacji (moc, ceny, degradacja, inflacja, uzyski PVGIS)
+ * @param input - Parametry symulacji
  * @param capexAfterSubsidy - CAPEX netto po dotacji (PLN)
- * @param initialCapex - CAPEX brutto przed dotacja (PLN) — baza dla OPEX
+ * @param initialCapex - CAPEX brutto (PLN) — baza dla OPEX
  * @param autoconsumptionRate - Wspolczynnik autokonsumpcji (0..1)
- * @param lifetime - Okres zycia projektu w latach (domyslnie 25)
- * @returns Tablica wierszy cash flow dla lat 0..lifetime
- *
- * @example
- * ```ts
- * const table = buildCashFlowTable(input, 200_000, 500_000, 0.4, 25);
- * // table[0].netCashFlow === -200_000 (inwestycja)
- * // table[1].savings > 0 (oszczednosci z autokonsumpcji)
- * ```
+ * @param loanAnnualPayment - Roczna rata kredytu (PLN), 0 jesli brak
+ * @param loanTerm - Okres kredytu w latach, 0 jesli brak
+ * @param lifetime - Okres zycia projektu (domyslnie 25)
  */
 export function buildCashFlowTable(
   input: SimulationInput,
   capexAfterSubsidy: number,
   initialCapex: number,
   autoconsumptionRate: number,
+  loanAnnualPayment: number = 0,
+  loanTerm: number = 0,
   lifetime: number = PROJECT_LIFETIME,
 ): AnnualCashFlowRow[] {
   const rows: AnnualCashFlowRow[] = [];
 
-  // Rok 0 — inwestycja
+  // Rok 0 — wklad wlasny (CAPEX minus czesc kredytowana)
+  const ownContribution = input.loanEnabled
+    ? capexAfterSubsidy * (1 - input.loanShare / 100)
+    : capexAfterSubsidy;
+
   rows.push({
     year: 0,
     energyGenerated: 0,
@@ -48,17 +42,16 @@ export function buildCashFlowTable(
     savings: 0,
     exportRevenue: 0,
     opex: 0,
-    netCashFlow: -capexAfterSubsidy,
-    cumulativeCashFlow: -capexAfterSubsidy,
+    loanPayment: 0,
+    netCashFlow: -ownContribution,
+    cumulativeCashFlow: -ownContribution,
     gridPrice: input.cenaEnergii,
     exportPrice: input.cenaSprzedazy,
   });
 
-  // Lata eksploatacji 1..lifetime
   for (let year = 1; year <= lifetime; year++) {
     const prevCumulative = rows[year - 1].cumulativeCashFlow;
 
-    // Produkcja z degradacja (year-1 bo rok 1 = pierwszy rok eksploatacji = 0 lat degradacji)
     const energyGenerated = getAnnualProduction(
       input.annualYield,
       input.degradacja,
@@ -68,17 +61,17 @@ export function buildCashFlowTable(
     const energySelfConsumed = energyGenerated * autoconsumptionRate;
     const energyExported = energyGenerated - energySelfConsumed;
 
-    // Ceny z inflacja (year-1 bo rok 1 = cena bazowa bez inflacji)
     const gridPrice =
-      input.cenaEnergii * Math.pow(1 + input.inflacjaEnergii, year - 1);
+      input.cenaEnergii * (1 + input.inflacjaEnergii) ** (year - 1);
     const exportPrice =
-      input.cenaSprzedazy * Math.pow(1 + input.inflacjaEnergii, year - 1);
+      input.cenaSprzedazy * (1 + input.inflacjaEnergii) ** (year - 1);
 
     const savings = energySelfConsumed * gridPrice;
     const exportRevenue = energyExported * exportPrice;
     const opex = calculateOpex(initialCapex, year - 1);
+    const loanPayment = year <= loanTerm ? loanAnnualPayment : 0;
 
-    const netCashFlow = savings + exportRevenue - opex;
+    const netCashFlow = savings + exportRevenue - opex - loanPayment;
     const cumulativeCashFlow = prevCumulative + netCashFlow;
 
     rows.push({
@@ -89,6 +82,7 @@ export function buildCashFlowTable(
       savings,
       exportRevenue,
       opex,
+      loanPayment,
       netCashFlow,
       cumulativeCashFlow,
       gridPrice,
@@ -100,22 +94,13 @@ export function buildCashFlowTable(
 }
 
 /**
- * Oblicza prosty czas zwrotu inwestycji (PBP / SPBT).
+ * Oblicza czas zwrotu inwestycji z interpolacja liniowa.
  *
- * Formula prosta: `PBP = TC / S_t` (koszt calkowity / roczne oszczednosci).
- * Poniewaz oszczednosci zmieniaja sie rok po roku (inflacja, degradacja),
- * stosujemy interpolacje liniowa na kumulatywnym cash flow:
+ * Liczy na bazie skumulowanych przeplywow z tabeli cash flow.
+ * Tabela juz zawiera perspektywe wlasciciela (z ratami kredytu).
  *
- * `PBP = rokPrzed + |cumPrzed| / (cumPo - cumPrzed)`
- *
- * @param cashFlowTable - Tablica wierszy cash flow (z roku 0)
- * @returns Czas zwrotu w latach (ulamkowy). Infinity jesli nie osiagniety w lifetime.
- *
- * @example
- * ```ts
- * const pbp = calculatePaybackPeriod(cashFlowTable);
- * // => 8.3 (zwrot po ~8 latach i 4 miesiacach)
- * ```
+ * @param cashFlowTable - Tablica wierszy cash flow (rok 0..n)
+ * @returns Czas zwrotu w latach (ulamkowy). Infinity jesli nie osiagniety.
  */
 export function calculatePaybackPeriod(
   cashFlowTable: AnnualCashFlowRow[],
@@ -124,12 +109,9 @@ export function calculatePaybackPeriod(
     if (cashFlowTable[i].cumulativeCashFlow >= 0) {
       const prev = cashFlowTable[i - 1].cumulativeCashFlow;
       const curr = cashFlowTable[i].cumulativeCashFlow;
-
-      // Interpolacja liniowa
       const fraction = Math.abs(prev) / (curr - prev);
       return cashFlowTable[i - 1].year + fraction;
     }
   }
-
   return Infinity;
 }
