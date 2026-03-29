@@ -1,5 +1,5 @@
-const MIESIACE = [
-  "Sty", "Lut", "Mar", "Kwi", "Maj", "Cze", 
+export const MIESIACE = [
+  "Sty", "Lut", "Mar", "Kwi", "Maj", "Cze",
   "Lip", "Sie", "Wrz", "Paź", "Lis", "Gru"
 ];
 
@@ -10,3 +10,15 @@ export const prepareMonthlyChartData = (apiYields: number[]) => {
     produkcja: Math.round(value), // Zaokrąglamy dla czystości na wykresie
   }));
 };
+
+export function formatPLN(value: number): string {
+  return value.toLocaleString("pl-PL", { maximumFractionDigits: 0 }) + " PLN";
+}
+
+export function formatPercent(value: number, decimals = 1): string {
+  return (value * 100).toFixed(decimals) + "%";
+}
+
+export function formatKWh(value: number): string {
+  return value.toLocaleString("pl-PL", { maximumFractionDigits: 0 }) + " kWh";
+}

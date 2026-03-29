@@ -30,6 +30,14 @@ export interface SimulationInput {
    * Juz przeskalowany dla zadanej mocy i kata nachylenia.
    */
   annualYield: number;
+  /** Czy finansowanie kredytem jest wlaczone */
+  loanEnabled: boolean;
+  /** Roczna stopa procentowa kredytu jako ulamek dziesietny (np. 0.07 = 7%) */
+  loanRate: number;
+  /** Okres kredytu w latach */
+  loanTerm: number;
+  /** Jaki procent wkladu wlasnego (CAPEX po dotacji) jest finansowany kredytem (0-100) */
+  loanShare: number;
 }
 
 /** Produkcja miesiecy dla pojedynczego roku */
@@ -60,6 +68,8 @@ export interface AnnualCashFlowRow {
   exportRevenue: number;
   /** Koszty operacyjne w danym roku (PLN) */
   opex: number;
+  /** Rata kredytu w danym roku (PLN), 0 jesli brak kredytu lub po splacie */
+  loanPayment: number;
   /** Przeplywy pieniezne netto w danym roku (PLN) */
   netCashFlow: number;
   /** Skumulowane przeplywy pieniezne do danego roku (PLN) */
@@ -100,6 +110,20 @@ export interface SimulationResult {
   irr: number;
   /** Prosty czas zwrotu w latach */
   paybackYears: number;
+  /** Zdyskontowany czas zwrotu w latach (uwzględnia wartość czasu pieniądza) */
+  paybackYearsDiscounted: number;
+  /** NPV z perspektywy właściciela (uwzględnia raty kredytu) */
+  ownerNpv: number;
+  /** IRR z perspektywy właściciela (uwzględnia raty kredytu) */
+  ownerIrr: number;
+  /** Prosty czas zwrotu z perspektywy właściciela (uwzględnia raty kredytu) */
+  ownerPayback: number;
+  /** Project LCOE (bez finansowania) kept for reference */
+  projectLcoe: number;
+  /** Kwota kredytu (PLN), 0 jesli brak */
+  loanPrincipal: number;
+  /** Roczna rata kredytu (PLN), 0 jesli brak */
+  loanAnnualPayment: number;
   /** Tabela cash flow rok po roku */
   cashFlowTable: AnnualCashFlowRow[];
   /** Produkcja miesieczna w pierwszym roku eksploatacji */

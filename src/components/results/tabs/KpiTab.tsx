@@ -1,0 +1,128 @@
+import type { SimulationResult } from "#/engine";
+import { formatPercent, formatPLN } from "#/lib/utils";
+
+interface KpiTabProps {
+	result: SimulationResult;
+	cenaEnergii: number;
+}
+
+function kpiColor(good: boolean, neutral?: boolean) {
+	if (good) return "text-green-600";
+	if (neutral) return "text-amber-500";
+	return "text-red-500";
+}
+
+export function KpiTab({ result, cenaEnergii }: KpiTabProps) {
+	const irr = result.irr;
+	const pbp = result.paybackYears;
+
+	return (
+		<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+			{/* IRR */}
+			<div className="rounded-xl border border-(--chip-line) bg-(--chip-bg) p-4">
+				<p className="text-xs text-(--sea-ink-soft) uppercase tracking-wider mb-1">
+					Wewnętrzna stopa zwrotu (IRR)
+				</p>
+				<p
+					className={`text-2xl font-bold ${kpiColor(irr > 0.06, irr >= 0.03)}`}
+				>
+					{Number.isNaN(irr) ? "—" : formatPercent(irr)}
+				</p>
+				<p className="text-xs text-(--sea-ink-soft) mt-1">
+					Wymagana: &gt;6% (stopa dyskontowa)
+				</p>
+			</div>
+
+			{/* Payback */}
+			<div className="rounded-xl border border-(--chip-line) bg-(--chip-bg) p-4">
+				<p className="text-xs text-(--sea-ink-soft) uppercase tracking-wider mb-1">
+					Okres zwrotu (PBP) - prosty
+				</p>
+				<p className={`text-2xl font-bold ${kpiColor(pbp < 10, pbp <= 15)}`}>
+					{pbp === Number.POSITIVE_INFINITY
+						? "> 25 lat"
+						: `${pbp.toFixed(1)} lat`}
+				</p>
+				<p className="text-xs text-(--sea-ink-soft) mt-1">
+					Bez uwzględnienia wartości czasu pieniądza
+				</p>
+			</div>
+
+			{/* Discounted Payback */}
+			<div className="rounded-xl border border-(--chip-line) bg-(--chip-bg) p-4">
+				<p className="text-xs text-(--sea-ink-soft) uppercase tracking-wider mb-1">
+					Okres zwrotu (PBP) - zdyskontowany
+				</p>
+				<p
+					className={`text-2xl font-bold ${kpiColor(
+						result.paybackYearsDiscounted < 10,
+						result.paybackYearsDiscounted <= 15,
+					)}`}
+				>
+					{result.paybackYearsDiscounted === Number.POSITIVE_INFINITY
+						? "> 25 lat"
+						: `${result.paybackYearsDiscounted.toFixed(1)} lat`}
+				</p>
+				<p className="text-xs text-(--sea-ink-soft) mt-1">
+					Z uwzględnieniem wartości czasu pieniądza (6%)
+				</p>
+			</div>
+
+			{/* NPV */}
+			<div className="rounded-xl border border-(--chip-line) bg-(--chip-bg) p-4">
+				<p className="text-xs text-(--sea-ink-soft) uppercase tracking-wider mb-1">
+					Wartość bieżąca netto (NPV)
+				</p>
+				<p className={`text-2xl font-bold ${kpiColor(result.npv > 0)}`}>
+					{formatPLN(Math.round(result.npv))}
+				</p>
+				<p className="text-xs text-(--sea-ink-soft) mt-1">
+					{result.npv > 0
+						? "Projekt opłacalny"
+						: "Projekt nieopłacalny przy danej stopie dyskontowej"}
+				</p>
+			</div>
+
+			{/* LCOE */}
+			<div className="rounded-xl border border-(--chip-line) bg-(--chip-bg) p-4">
+				<p className="text-xs text-(--sea-ink-soft) uppercase tracking-wider mb-1">
+					Koszt energii (LCOE)
+				</p>
+				<p
+					className={`text-2xl font-bold ${kpiColor(result.lcoe < cenaEnergii)}`}
+				>
+					{result.lcoe.toFixed(2)} PLN/kWh
+				</p>
+				<p className="text-xs text-(--sea-ink-soft) mt-1">
+					vs. {cenaEnergii.toFixed(2)} PLN/kWh z sieci
+				</p>
+			</div>
+
+			{/* CAPEX netto */}
+			<div className="rounded-xl border border-(--chip-line) bg-(--chip-bg) p-4">
+				<p className="text-xs text-(--sea-ink-soft) uppercase tracking-wider mb-1">
+					CAPEX netto
+				</p>
+				<p className="text-2xl font-bold text-(--sea-ink)">
+					{formatPLN(Math.round(result.capexAfterSubsidy))}
+				</p>
+				<p className="text-xs text-(--sea-ink-soft) mt-1">
+					Przed dotacją: {formatPLN(Math.round(result.capex))}
+				</p>
+			</div>
+
+			{/* Autokonsumpcja */}
+			<div className="rounded-xl border border-(--chip-line) bg-(--chip-bg) p-4">
+				<p className="text-xs text-(--sea-ink-soft) uppercase tracking-wider mb-1">
+					Autokonsumpcja
+				</p>
+				<p className="text-2xl font-bold text-(--sea-ink)">
+					{formatPercent(result.autoconsumptionRate, 0)}
+				</p>
+				<p className="text-xs text-(--sea-ink-soft) mt-1">
+					OPEX roczny (rok 1): {formatPLN(Math.round(result.annualOpex))}
+				</p>
+			</div>
+		</div>
+	);
+}

@@ -25,11 +25,11 @@ import {
  * ```ts
  * // Mala gmina, 50 kWp, magazyn 25 kWh (0.5 kWh/kWp)
  * getAutoconsumptionRate("small", 25, 50);
- * // => 0.30 + (25/50) * 0.08 = 0.34
+ * // => 0.30 + (25/50) * 0.20 = 0.40
  *
  * // Duza gmina, 100 kWp, magazyn 100 kWh (1 kWh/kWp)
  * getAutoconsumptionRate("large", 100, 100);
- * // => 0.50 + (100/100) * 0.08 = 0.58
+ * // => 0.50 + (100/100) * 0.20 = 0.70
  * ```
  */
 export function getAutoconsumptionRate(

@@ -9,8 +9,12 @@ export const searchDefaults = {
 	degradacja: 0.5,
 	katNachylenia: 35,
 	cenaEnergii: 0.85,
-	cenaSprzedazy: 0.4,
+	cenaSprzedazy: 0.25,
 	inflacjaEnergii: 3,
+	loanEnabled: false,
+	loanRate: 7,
+	loanTerm: 15,
+	loanShare: 100,
 	lat: 52.2297,
 	lon: 21.0122,
 } as const;
@@ -26,6 +30,10 @@ export type SearchParams = {
 	cenaEnergii: number;
 	cenaSprzedazy: number;
 	inflacjaEnergii: number;
+	loanEnabled: boolean;
+	loanRate: number;
+	loanTerm: number;
+	loanShare: number;
 	lat: number;
 	lon: number;
 };
