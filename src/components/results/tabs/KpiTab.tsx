@@ -15,6 +15,7 @@ function kpiColor(good: boolean, neutral?: boolean) {
 export function KpiTab({ result, cenaEnergii }: KpiTabProps) {
 	const irr = result.irr;
 	const pbp = result.paybackYears;
+	const hasLoan = result.loanPrincipal > 0;
 
 	return (
 		<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -36,7 +37,7 @@ export function KpiTab({ result, cenaEnergii }: KpiTabProps) {
 			{/* Payback */}
 			<div className="rounded-xl border border-(--chip-line) bg-(--chip-bg) p-4">
 				<p className="text-xs text-(--sea-ink-soft) uppercase tracking-wider mb-1">
-					Okres zwrotu (PBP) - prosty
+					Okres zwrotu (PBP)
 				</p>
 				<p className={`text-2xl font-bold ${kpiColor(pbp < 10, pbp <= 15)}`}>
 					{pbp === Number.POSITIVE_INFINITY
@@ -44,27 +45,7 @@ export function KpiTab({ result, cenaEnergii }: KpiTabProps) {
 						: `${pbp.toFixed(1)} lat`}
 				</p>
 				<p className="text-xs text-(--sea-ink-soft) mt-1">
-					Bez uwzględnienia wartości czasu pieniądza
-				</p>
-			</div>
-
-			{/* Discounted Payback */}
-			<div className="rounded-xl border border-(--chip-line) bg-(--chip-bg) p-4">
-				<p className="text-xs text-(--sea-ink-soft) uppercase tracking-wider mb-1">
-					Okres zwrotu (PBP) - zdyskontowany
-				</p>
-				<p
-					className={`text-2xl font-bold ${kpiColor(
-						result.paybackYearsDiscounted < 10,
-						result.paybackYearsDiscounted <= 15,
-					)}`}
-				>
-					{result.paybackYearsDiscounted === Number.POSITIVE_INFINITY
-						? "> 25 lat"
-						: `${result.paybackYearsDiscounted.toFixed(1)} lat`}
-				</p>
-				<p className="text-xs text-(--sea-ink-soft) mt-1">
-					Z uwzględnieniem wartości czasu pieniądza (6%)
+					{hasLoan ? "Z uwzględnieniem rat kredytu" : "Żywotność projektu: 25 lat"}
 				</p>
 			</div>
 
@@ -111,18 +92,32 @@ export function KpiTab({ result, cenaEnergii }: KpiTabProps) {
 				</p>
 			</div>
 
-			{/* Autokonsumpcja */}
-			<div className="rounded-xl border border-(--chip-line) bg-(--chip-bg) p-4">
-				<p className="text-xs text-(--sea-ink-soft) uppercase tracking-wider mb-1">
-					Autokonsumpcja
-				</p>
-				<p className="text-2xl font-bold text-(--sea-ink)">
-					{formatPercent(result.autoconsumptionRate, 0)}
-				</p>
-				<p className="text-xs text-(--sea-ink-soft) mt-1">
-					OPEX roczny (rok 1): {formatPLN(Math.round(result.annualOpex))}
-				</p>
-			</div>
+			{/* Kredyt lub Autokonsumpcja */}
+			{hasLoan ? (
+				<div className="rounded-xl border border-(--chip-line) bg-(--chip-bg) p-4">
+					<p className="text-xs text-(--sea-ink-soft) uppercase tracking-wider mb-1">
+						Kredyt
+					</p>
+					<p className="text-2xl font-bold text-(--sea-ink)">
+						{formatPLN(Math.round(result.loanAnnualPayment))}/rok
+					</p>
+					<p className="text-xs text-(--sea-ink-soft) mt-1">
+						Kwota: {formatPLN(Math.round(result.loanPrincipal))}
+					</p>
+				</div>
+			) : (
+				<div className="rounded-xl border border-(--chip-line) bg-(--chip-bg) p-4">
+					<p className="text-xs text-(--sea-ink-soft) uppercase tracking-wider mb-1">
+						Autokonsumpcja
+					</p>
+					<p className="text-2xl font-bold text-(--sea-ink)">
+						{formatPercent(result.autoconsumptionRate, 0)}
+					</p>
+					<p className="text-xs text-(--sea-ink-soft) mt-1">
+						OPEX roczny (rok 1): {formatPLN(Math.round(result.annualOpex))}
+					</p>
+				</div>
+			)}
 		</div>
 	);
 }

@@ -78,7 +78,7 @@ export function AnnualCashFlowChart({ cashFlowTable }: Props) {
 					<Bar dataKey="netCashFlow" name="Netto" stackId="a" fill="var(--lagoon-deep)" radius={[0, 0, 0, 0]} />
 					<Bar dataKey="opex" name="OPEX" stackId="a" fill="var(--sea-ink-soft)" opacity={0.4} radius={hasLoan ? [0, 0, 0, 0] : [4, 4, 0, 0]} />
 					{hasLoan && (
-						<Bar dataKey="loanPayment" name="Kredyt" stackId="a" fill="#c2410c" opacity={0.5} radius={[4, 4, 0, 0]} />
+						<Bar dataKey="loanPayment" name="Kredyt" stackId="a" fill="var(--kicker)" opacity={0.5} radius={[4, 4, 0, 0]} />
 					)}
 				</ComposedChart>
 			</ResponsiveContainer>
