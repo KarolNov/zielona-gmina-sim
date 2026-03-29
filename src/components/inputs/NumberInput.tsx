@@ -9,6 +9,7 @@ type NumberInputProps = {
   max?: number
   step?: number
   validator?: ValidatorFn
+  warning?: string | null
   name?: string
   decimal?: number
   id?: string
@@ -23,6 +24,7 @@ export default function NumberInput({
   step = 1,
   decimal,
   validator,
+  warning,
   name,
   id
 }: NumberInputProps) {
@@ -86,6 +88,7 @@ export default function NumberInput({
         className="w-full rounded-md border border-(--chip-line) bg-(--chip-bg) px-3 py-2 text-(--sea-ink) shadow-sm focus:outline-none focus:ring-2 focus:ring-(--lagoon-deep)"
       />
       {error ? <div className="text-sm text-red-600">{error}</div> : null}
+      {!error && warning ? <div className="text-xs text-amber-600">{warning}</div> : null}
     </div>
   )
 }

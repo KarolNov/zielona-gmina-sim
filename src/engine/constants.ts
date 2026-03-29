@@ -11,17 +11,17 @@ export const DISCOUNT_RATE = 0.06;
  * Wieksze instalacje maja nizszy koszt jednostkowy (ekonomia skali).
  */
 export const CAPEX_TIERS = [
-  { maxKwp: 10, costPerKwp: 5500 },
-  { maxKwp: 50, costPerKwp: 5000 },
-  { maxKwp: 200, costPerKwp: 4500 },
-  { maxKwp: Infinity, costPerKwp: 4000 },
+  { maxKwp: 10, costPerKwp: 4000 },
+  { maxKwp: 50, costPerKwp: 3500 },
+  { maxKwp: 200, costPerKwp: 3200 },
+  { maxKwp: Infinity, costPerKwp: 2800 },
 ] as const;
 
 /** Koszt magazynu energii za kWh pojemnosci (PLN/kWh) — ceny 2025/2026 */
 export const STORAGE_COST_PER_KWH = 2000;
 
-/** OPEX jako ulamek CAPEX rocznie (1.5%) */
-export const OPEX_RATE = 0.015;
+/** OPEX jako ulamek CAPEX rocznie (1%) */
+export const OPEX_RATE = 0.01;
 
 /** Roczna eskalacja kosztow OPEX (2%) */
 export const OPEX_ESCALATION = 0.02;

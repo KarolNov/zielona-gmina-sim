@@ -23,6 +23,14 @@ import { donationSchema } from "#/lib/validators/donation";
 import { inflacjaSchema } from "#/lib/validators/inflacja";
 import { getPvPowerSchema } from "#/lib/validators/pv-power";
 import { valibotValidator } from "#/lib/validators/valibot";
+import {
+	warnCenaEnergii,
+	warnCenaSprzedazy,
+	warnDegradacja,
+	warnDonation,
+	warnInflacja,
+	warnLoanRate,
+} from "#/lib/warnings";
 import LatLonInput from "../components/inputs/LatLonInput";
 import NumberInput from "../components/inputs/NumberInput";
 import Select from "../components/inputs/Select";
@@ -310,6 +318,7 @@ function App() {
 							step={0.1}
 							decimal={1}
 							validator={valibotValidator(degradacjaSchema)}
+							warning={warnDegradacja(degradacja)}
 							name="degradacja"
 							id="degradacja"
 						/>
@@ -357,6 +366,7 @@ function App() {
 							step={1}
 							decimal={2}
 							validator={valibotValidator(donationSchema)}
+							warning={warnDonation(donation)}
 							name="donationPct"
 							id="donationPct"
 						/>
@@ -369,6 +379,7 @@ function App() {
 							step={0.01}
 							decimal={2}
 							validator={valibotValidator(cenaEnergiiSchema)}
+							warning={warnCenaEnergii(cenaEnergii)}
 							name="cenaEnergii"
 							id="cenaEnergii"
 						/>
@@ -381,6 +392,7 @@ function App() {
 							step={0.01}
 							decimal={2}
 							validator={valibotValidator(cenaSprzedazySchema)}
+							warning={warnCenaSprzedazy(cenaSprzedazy, cenaEnergii)}
 							name="cenaSprzedazy"
 							id="cenaSprzedazy"
 						/>
@@ -393,6 +405,7 @@ function App() {
 							step={0.5}
 							decimal={1}
 							validator={valibotValidator(inflacjaSchema)}
+							warning={warnInflacja(inflacjaEnergii)}
 							name="inflacjaEnergii"
 							id="inflacjaEnergii"
 						/>
@@ -423,6 +436,7 @@ function App() {
 									max={20}
 									step={0.5}
 									decimal={1}
+									warning={warnLoanRate(loanRate)}
 									name="loanRate"
 									id="loanRate"
 								/>

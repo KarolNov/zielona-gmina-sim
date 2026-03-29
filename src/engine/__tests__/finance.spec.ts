@@ -6,8 +6,8 @@ function baseInput(overrides: Partial<SimulationInput> = {}): SimulationInput {
   return {
     pvPower: 100,
     degradacja: 0.005,
-    cenaEnergii: 0.85,
-    cenaSprzedazy: 0.25,
+    cenaEnergii: 1.2,
+    cenaSprzedazy: 0.4,
     inflacjaEnergii: 0.03,
     donation: 0,
     storageEnabled: false,
