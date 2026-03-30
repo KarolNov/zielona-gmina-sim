@@ -56,6 +56,13 @@ export function calculateIRR(
   cashFlowTable: AnnualCashFlowRow[],
 ): number {
   const cashFlows = cashFlowTable.map((row) => row.netCashFlow);
+
+  // IRR wymaga zmiany znaku w cash flow (inwestycja ujemna, potem zwroty).
+  // Bez ujemnego poczatkowego CF (np. 100% kredytu) IRR jest niezdefiniowane.
+  const hasNegative = cashFlows.some((cf) => cf < 0);
+  const hasPositive = cashFlows.some((cf) => cf > 0);
+  if (!hasNegative || !hasPositive) return NaN;
+
   const maxIterations = 100;
   const tolerance = 1e-6;
   let rate = 0.1; // Poczatkowe przyblizenie

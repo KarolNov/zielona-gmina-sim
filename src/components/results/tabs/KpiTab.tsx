@@ -16,6 +16,9 @@ export function KpiTab({ result, cenaEnergii }: KpiTabProps) {
 	const irr = result.irr;
 	const pbp = result.paybackYears;
 	const hasLoan = result.loanPrincipal > 0;
+	// Przy 100% kredytu wklad wlasny = 0, IRR i PBP nie maja sensu
+	const noOwnCapital =
+		hasLoan && result.cashFlowTable[0].netCashFlow >= -1;
 
 	return (
 		<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -24,14 +27,25 @@ export function KpiTab({ result, cenaEnergii }: KpiTabProps) {
 				<p className="text-xs text-(--sea-ink-soft) uppercase tracking-wider mb-1">
 					Wewnętrzna stopa zwrotu (IRR)
 				</p>
-				<p
-					className={`text-2xl font-bold ${kpiColor(irr > 0.06, irr >= 0.03)}`}
-				>
-					{Number.isNaN(irr) ? "—" : formatPercent(irr)}
-				</p>
-				<p className="text-xs text-(--sea-ink-soft) mt-1">
-					Wymagana: &gt;6% (stopa dyskontowa)
-				</p>
+				{noOwnCapital ? (
+					<>
+						<p className="text-2xl font-bold text-(--sea-ink-soft)">—</p>
+						<p className="text-xs text-(--sea-ink-soft) mt-1">
+							Brak wkładu własnego — IRR nie dotyczy
+						</p>
+					</>
+				) : (
+					<>
+						<p
+							className={`text-2xl font-bold ${kpiColor(irr > 0.06, irr >= 0.03)}`}
+						>
+							{Number.isNaN(irr) ? "—" : formatPercent(irr)}
+						</p>
+						<p className="text-xs text-(--sea-ink-soft) mt-1">
+							Wymagana: &gt;6% (stopa dyskontowa)
+						</p>
+					</>
+				)}
 			</div>
 
 			{/* Payback */}
@@ -39,14 +53,25 @@ export function KpiTab({ result, cenaEnergii }: KpiTabProps) {
 				<p className="text-xs text-(--sea-ink-soft) uppercase tracking-wider mb-1">
 					Okres zwrotu (PBP)
 				</p>
-				<p className={`text-2xl font-bold ${kpiColor(pbp < 10, pbp <= 15)}`}>
-					{pbp === Number.POSITIVE_INFINITY
-						? "> 25 lat"
-						: `${pbp.toFixed(1)} lat`}
-				</p>
-				<p className="text-xs text-(--sea-ink-soft) mt-1">
-					{hasLoan ? "Z uwzględnieniem rat kredytu" : "Żywotność projektu: 25 lat"}
-				</p>
+				{noOwnCapital ? (
+					<>
+						<p className="text-2xl font-bold text-(--sea-ink-soft)">—</p>
+						<p className="text-xs text-(--sea-ink-soft) mt-1">
+							Brak wkładu własnego — natychmiastowy zwrot
+						</p>
+					</>
+				) : (
+					<>
+						<p className={`text-2xl font-bold ${kpiColor(pbp < 10, pbp <= 15)}`}>
+							{pbp === Number.POSITIVE_INFINITY
+								? "> 25 lat"
+								: `${pbp.toFixed(1)} lat`}
+						</p>
+						<p className="text-xs text-(--sea-ink-soft) mt-1">
+							{hasLoan ? "Z uwzględnieniem rat kredytu" : "Żywotność projektu: 25 lat"}
+						</p>
+					</>
+				)}
 			</div>
 
 			{/* NPV */}
