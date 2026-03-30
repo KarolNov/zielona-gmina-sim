@@ -1,5 +1,5 @@
 import type { SimulationResult } from "#/engine";
-import { formatPercent, formatPLN } from "#/lib/utils";
+import { formatPercent, formatPLN, formatYears } from "#/lib/utils";
 
 interface KpiTabProps {
 	result: SimulationResult;
@@ -65,7 +65,7 @@ export function KpiTab({ result, cenaEnergii }: KpiTabProps) {
 						<p className={`text-2xl font-bold ${kpiColor(pbp < 10, pbp <= 15)}`}>
 							{pbp === Number.POSITIVE_INFINITY
 								? "> 25 lat"
-								: `${pbp.toFixed(1)} lat`}
+								: formatYears(pbp)}
 						</p>
 						<p className="text-xs text-(--sea-ink-soft) mt-1">
 							{hasLoan ? "Z uwzględnieniem rat kredytu" : "Żywotność projektu: 25 lat"}
