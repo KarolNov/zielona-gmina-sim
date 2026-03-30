@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { CommuneType } from '#/lib/types';
-import { runSimulation, type SimulationInput } from '../index';
+import { runSimulation, type SimulationInput, INVERTER_REPLACEMENT_YEAR } from '../index';
 
 function baseInput(overrides: Partial<SimulationInput> = {}): SimulationInput {
   return {
@@ -54,11 +54,8 @@ describe('finance invariants', () => {
       cenaSprzedazy: 1.5,
     }));
 
-    // With loan, owner puts less upfront but pays rates, so payback
-    // may be shorter (less upfront) or longer (rates eat into CF).
     // Both should be finite with these high prices.
     expect(noLoan.paybackYears).toBeLessThan(25);
-    // With 80% loan on low annualYield, payback may exceed 25y due to high rates
     // Just verify both are positive numbers
     expect(withLoan.paybackYears).toBeGreaterThan(0);
   });
@@ -96,5 +93,72 @@ describe('finance invariants', () => {
     expect(result.cashFlowTable[10].loanPayment).toBeGreaterThan(0);
     // Year 11 should not
     expect(result.cashFlowTable[11].loanPayment).toBe(0);
+  });
+});
+
+describe('maintenance costs', () => {
+  test('OPEX breakdown components are positive and sum to annualOpex', () => {
+    const result = runSimulation(baseInput());
+    const b = result.annualOpexBreakdown;
+
+    expect(b.servicing).toBeGreaterThan(0);
+    expect(b.insurance).toBeGreaterThan(0);
+    expect(b.repairs).toBeGreaterThan(0);
+    expect(b.monitoring).toBeGreaterThan(0);
+    expect(b.total).toBeCloseTo(
+      b.servicing + b.insurance + b.repairs + b.monitoring,
+    );
+    expect(result.annualOpex).toBeCloseTo(b.total);
+  });
+
+  test('inverter replacement appears only in year 12', () => {
+    const result = runSimulation(baseInput());
+
+    for (const row of result.cashFlowTable) {
+      if (row.year === INVERTER_REPLACEMENT_YEAR) {
+        expect(row.inverterReplacement).toBeGreaterThan(0);
+      } else {
+        expect(row.inverterReplacement).toBe(0);
+      }
+    }
+  });
+
+  test('inverter replacement cost equals pvPower * cost per kWp', () => {
+    const result = runSimulation(baseInput({ pvPower: 50 }));
+    // 50 kWp * 500 PLN/kWp = 25,000 PLN
+    expect(result.inverterReplacementCost).toBe(25_000);
+    expect(result.cashFlowTable[INVERTER_REPLACEMENT_YEAR].inverterReplacement).toBe(25_000);
+  });
+
+  test('inverter replacement reduces net cash flow in year 12', () => {
+    const result = runSimulation(baseInput());
+    const year11 = result.cashFlowTable[11];
+    const year12 = result.cashFlowTable[12];
+    const year13 = result.cashFlowTable[13];
+
+    // Year 12 net CF should be significantly lower than neighbors
+    expect(year12.netCashFlow).toBeLessThan(year11.netCashFlow);
+    expect(year12.netCashFlow).toBeLessThan(year13.netCashFlow);
+  });
+
+  test('OPEX scales with system size', () => {
+    const small = runSimulation(baseInput({ pvPower: 10 }));
+    const large = runSimulation(baseInput({ pvPower: 200 }));
+
+    expect(large.annualOpex).toBeGreaterThan(small.annualOpex);
+  });
+
+  test('cash flow table has opexBreakdown in every row', () => {
+    const result = runSimulation(baseInput());
+
+    for (const row of result.cashFlowTable) {
+      expect(row.opexBreakdown).toBeDefined();
+      if (row.year === 0) {
+        expect(row.opexBreakdown.total).toBe(0);
+      } else {
+        expect(row.opexBreakdown.total).toBeGreaterThan(0);
+        expect(row.opex).toBeCloseTo(row.opexBreakdown.total);
+      }
+    }
   });
 });

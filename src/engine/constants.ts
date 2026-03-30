@@ -20,11 +20,34 @@ export const CAPEX_TIERS = [
 /** Koszt magazynu energii za kWh pojemnosci (PLN/kWh) — ceny 2025/2026 */
 export const STORAGE_COST_PER_KWH = 2000;
 
-/** OPEX jako ulamek CAPEX rocznie (1%) */
-export const OPEX_RATE = 0.01;
+// ---------------------------------------------------------------------------
+// Koszty utrzymania (OPEX) — skladniki roczne
+// ---------------------------------------------------------------------------
 
-/** Roczna eskalacja kosztow OPEX (2%) */
-export const OPEX_ESCALATION = 0.02;
+/** Serwisowanie i czyszczenie paneli (PLN/kWp/rok) */
+export const MAINTENANCE_SERVICING_PER_KWP = 40;
+
+/** Ubezpieczenie majatkowe jako ulamek CAPEX brutto rocznie (0.4%) */
+export const MAINTENANCE_INSURANCE_RATE = 0.004;
+
+/** Rezerwa na naprawy jako ulamek CAPEX brutto rocznie (0.2%) */
+export const MAINTENANCE_REPAIRS_RATE = 0.002;
+
+/** Monitoring i zuzycie wlasne — stala kwota roczna (PLN) */
+export const MAINTENANCE_MONITORING_FLAT = 600;
+
+/** Roczna eskalacja kosztow utrzymania (2% — inflacja) */
+export const MAINTENANCE_ESCALATION = 0.02;
+
+// ---------------------------------------------------------------------------
+// Wymiana inwertera (jednorazowa)
+// ---------------------------------------------------------------------------
+
+/** Rok wymiany inwertera (typowa zywotnosc 10-15 lat) */
+export const INVERTER_REPLACEMENT_YEAR = 12;
+
+/** Koszt wymiany inwertera (PLN/kWp) — ok. 15% kosztu instalacji PV */
+export const INVERTER_REPLACEMENT_PER_KWP = 500;
 
 /**
  * Bazowy wspolczynnik autokonsumpcji wg rozmiaru gminy (bez magazynu).
