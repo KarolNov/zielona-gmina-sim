@@ -28,6 +28,5 @@
 
 - Symulacja godzinowa (profil produkcji vs. profil zużycia) zamiast stałego współczynnika autokonsumpcji.
 - Asymetryczna inflacja (osobna stopa dla ceny zakupu i sprzedaży).
-- Koszty finansowania (raty kredytu, odsetki).
 - Etapowanie CAPEX (rozłożenie inwestycji na kilka lat).
 - Wymiana inwertera po ~12 latach jako dodatkowy CAPEX.

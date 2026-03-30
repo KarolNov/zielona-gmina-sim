@@ -1,11 +1,13 @@
 # Model finansowy spółdzielni energetycznej
 
-Dokumentacja silnika obliczeniowego (`src/engine/`) symulatora zwrotu
+Niniejszy dokument opisuje model finansowy służący ocenie opłacalności
 inwestycji w spółdzielczą instalację fotowoltaiczną na terenie gminy.
+Model obejmuje bilans energetyczny, analizę nakładów inwestycyjnych
+i kosztów operacyjnych, opcjonalne finansowanie kredytowe, harmonogram
+przepływów pieniężnych oraz wskaźniki efektywności ekonomicznej.
 
-Silnik składa się z czystych funkcji (pure functions) bez efektów ubocznych.
-Dane wejściowe zbierane są z UI i z API PVGIS; wyniki zasilają tabelę
-cash flow rok po roku oraz wykresy.
+Wszystkie obliczenia prowadzone są z perspektywy właściciela instalacji —
+uwzględniają dotacje, koszty obsługi kredytu oraz inflację cen energii.
 
 ---
 
@@ -13,20 +15,24 @@ cash flow rok po roku oraz wykresy.
 
 | Kategoria | Parametr | Jednostka | Źródło |
 |-----------|----------|-----------|--------|
-| **Techniczne** | Moc zainstalowana (`pvPower`) | kWp | UI |
-| | Kąt nachylenia paneli | ° | UI |
-| | Roczna degradacja paneli (`degradacja`) | % / rok | UI (domyślnie 0,5%) |
-| | Magazyn energii (`storageCapacity`) | kWh | UI (% mocy PV) |
-| **Energetyczne** | Roczny uzysk (`annualYield`) | kWh | PVGIS |
-| | Uzyski miesięczne (`monthlyYields`) | kWh × 12 | PVGIS |
-| **Finansowe** | Cena energii z sieci (`cenaEnergii`) | PLN/kWh | UI (domyślnie 0,85) |
-| | Cena sprzedaży nadwyżek (`cenaSprzedazy`) | PLN/kWh | UI (domyślnie 0,40) |
-| | Inflacja ceny energii (`inflacjaEnergii`) | % / rok | UI (domyślnie 3%) |
-| | Dofinansowanie (`donation`) | % CAPEX | UI |
-| **Profilowe** | Rozmiar gminy (`communeSize`) | small / medium / large | UI |
+| **Techniczne** | Moc zainstalowana | kWp | dane użytkownika |
+| | Roczna degradacja paneli | % / rok | dane użytkownika (domyślnie 0,5%) |
+| | Włączenie magazynu energii | tak / nie | dane użytkownika |
+| | Pojemność magazynu energii | kWh | dane użytkownika |
+| **Energetyczne** | Roczny uzysk energetyczny | kWh | baza PVGIS (JRC) |
+| | Rozkład uzysku miesięcznego | kWh × 12 | baza PVGIS (JRC) |
+| **Finansowe** | Cena zakupu energii z sieci | PLN/kWh | dane użytkownika (domyślnie 0,85) |
+| | Cena sprzedaży nadwyżek do sieci | PLN/kWh | dane użytkownika (domyślnie 0,40) |
+| | Roczna inflacja ceny energii | % / rok | dane użytkownika (domyślnie 3%) |
+| | Dofinansowanie (dotacja) | % CAPEX | dane użytkownika |
+| **Finansowanie kredytowe** | Włączenie finansowania kredytowego | tak / nie | dane użytkownika |
+| | Roczna stopa oprocentowania kredytu | % | dane użytkownika |
+| | Okres kredytowania | lata | dane użytkownika |
+| | Udział kredytu w wkładzie własnym | % (0–100) | dane użytkownika |
+| **Profilowe** | Rozmiar gminy | mała / średnia / duża | dane użytkownika |
 
-Dane z PVGIS są już przeskalowane do zadanej mocy i kąta nachylenia —
-silnik nakłada na nie jedynie degradację.
+Dane z bazy PVGIS są przeskalowane do zadanej mocy i kąta nachylenia paneli —
+model nakłada na nie wyłącznie współczynnik degradacji.
 
 ---
 
@@ -38,14 +44,12 @@ $$E_{gen}(t) = E_{pvgis} \cdot (1 - d)^{t}$$
 
 | Symbol | Znaczenie |
 |--------|-----------|
-| $E_{pvgis}$ | Roczny uzysk z PVGIS dla pełnej mocy instalacji (kWh) |
+| $E_{pvgis}$ | Roczny uzysk energetyczny z bazy PVGIS dla pełnej mocy instalacji (kWh) |
 | $d$ | Roczna degradacja paneli (ułamek, np. 0,005) |
 | $t$ | Rok eksploatacji (0 = pierwszy rok, brak degradacji) |
 
 Produkcja miesięczna obliczana analogicznie — każdy z 12 uzysków
 miesięcznych mnożony przez $(1 - d)^t$.
-
-**Implementacja:** `getMonthlyProduction()`, `getAnnualProduction()` w `production.ts`
 
 ### 2.2 Podział: autokonsumpcja vs. eksport
 
@@ -60,8 +64,9 @@ Gdzie $\alpha$ to współczynnik autokonsumpcji (patrz sekcja 3).
 ## 3. Model autokonsumpcji
 
 Model uproszczony (bez symulacji godzinowej). Bazowy współczynnik zależy
-od rozmiaru gminy — większe gminy mają więcej obciążeń dziennych
-(szkoły, urzędy, pompownie wodociągowe):
+od rozmiaru gminy — większe gminy charakteryzują się wyższym obciążeniem
+dziennym (placówki oświatowe, obiekty administracyjne, przepompownie
+wodociągowe):
 
 | Rozmiar gminy | Baza $\alpha_0$ |
 |---------------|-----------------|
@@ -69,61 +74,96 @@ od rozmiaru gminy — większe gminy mają więcej obciążeń dziennych
 | Średnia (10 000–50 000) | 40% |
 | Duża (> 50 000) | 50% |
 
-Magazyn energii podnosi autokonsumpcję:
+Magazyn energii podnosi autokonsumpcję poprzez przesunięcie zużycia na
+godziny wieczorne i nocne (peak shaving, arbitraż czasowy):
 
-$$\alpha = \min\!\left(\alpha_0 + \frac{S_{kWh}}{P_{kWp}} \cdot 0{,}08,\; 0{,}90\right)$$
+$$\alpha = \min\!\left(\alpha_0 + \frac{S_{kWh}}{P_{kWp}} \cdot 0{,}20,\; 0{,}90\right)$$
 
 | Symbol | Znaczenie |
 |--------|-----------|
 | $S_{kWh}$ | Pojemność magazynu (kWh) |
 | $P_{kWp}$ | Moc instalacji (kWp) |
-| 0,08 | Przyrost autokonsumpcji na każdy kWh/kWp pojemności |
-| 0,90 | Cap — maksymalny realistyczny poziom |
-
-**Implementacja:** `getAutoconsumptionRate()` w `autoconsumption.ts`
+| 0,20 | Współczynnik przyrostu autokonsumpcji na jednostkę pojemności względnej magazynu (kWh/kWp) |
+| 0,90 | Górny limit — maksymalny realistyczny poziom autokonsumpcji |
 
 ---
 
-## 4. Koszty inwestycyjne (CAPEX)
+## 4. Nakłady inwestycyjne (CAPEX)
 
-### 4.1 Instalacja PV — ceny progowe
+### 4.1 Instalacja fotowoltaiczna — progi kosztowe
 
-Większe instalacje mają niższy koszt jednostkowy (ekonomia skali):
+Większe instalacje charakteryzują się niższym kosztem jednostkowym
+(korzyści skali):
 
 | Skala instalacji | Koszt PLN / kWp |
 |------------------|-----------------|
-| do 10 kWp | 5 500 |
-| do 50 kWp | 5 000 |
-| do 200 kWp | 4 500 |
-| powyżej 200 kWp | 4 000 |
+| do 10 kWp | 4 000 |
+| do 50 kWp | 3 500 |
+| do 200 kWp | 3 200 |
+| powyżej 200 kWp | 2 800 |
 
 ### 4.2 Magazyn energii
 
-Koszt: **2 500 PLN / kWh** pojemności.
+Koszt: **2 000 PLN / kWh** pojemności.
 
 ### 4.3 Dofinansowanie
 
 $$CAPEX_{netto} = CAPEX_{brutto} \cdot \left(1 - \frac{dotacja\%}{100}\right)$$
 
-**Implementacja:** `calculateCapex()`, `applySubsidy()` w `capex.ts`
-
 ---
 
 ## 5. Koszty operacyjne (OPEX)
 
-OPEX stanowi 1,5% początkowego CAPEX brutto rocznie i rośnie o 2% r/r
-(eskalacja kosztów serwisu, ubezpieczeń, zarządzania):
+Koszty eksploatacyjne obejmują serwis techniczny, ubezpieczenie oraz
+zarządzanie instalacją. Przyjęto je na poziomie 1,0% początkowego
+CAPEX brutto rocznie, z eskalacją 2% r/r odzwierciedlającą wzrost
+kosztów usług i materiałów eksploatacyjnych:
 
-$$OPEX(t) = CAPEX_{brutto} \cdot 0{,}015 \cdot (1{,}02)^{t}$$
-
-**Implementacja:** `calculateOpex()` w `opex.ts`
+$$OPEX(t) = CAPEX_{brutto} \cdot 0{,}01 \cdot (1{,}02)^{t}$$
 
 ---
 
-## 6. Harmonogram przepływów pieniężnych
+## 6. Finansowanie kredytowe
+
+Model uwzględnia opcjonalne finansowanie zewnętrzne w formie kredytu
+annuitetowego (raty równe). Kredytem objęty jest wskazany przez
+użytkownika udział procentowy wkładu własnego, tj. CAPEX netto po
+odjęciu dotacji.
+
+### 6.1 Kwota kredytu
+
+$$K = CAPEX_{netto} \cdot \frac{u}{100}$$
+
+| Symbol | Znaczenie |
+|--------|-----------|
+| $K$ | Kwota kredytu (kapitał) |
+| $u$ | Udział kredytu w wkładzie własnym (%) |
+
+### 6.2 Rata annuitetowa
+
+$$R = K \cdot \frac{r \cdot (1+r)^n}{(1+r)^n - 1}$$
+
+| Symbol | Znaczenie |
+|--------|-----------|
+| $R$ | Roczna rata kredytu (PLN) |
+| $r$ | Roczna stopa oprocentowania (ułamek, np. 0,07) |
+| $n$ | Okres kredytowania (lata) |
+
+W przypadku kredytu bezodsetkowego ($r = 0$) formuła redukuje się do:
+
+$$R = \frac{K}{n}$$
+
+Raty kredytowe obciążają przepływy pieniężne w latach $1 \leq t \leq n$.
+Po upływie okresu kredytowania rata wynosi zero.
+
+---
+
+## 7. Harmonogram przepływów pieniężnych
 
 Tabela generowana na 25 lat. Konwencja:
-- **Rok 0** — inwestycja (wypływ CAPEX netto po dotacji, brak produkcji)
+- **Rok 0** — wypływ wkładu własnego. W przypadku finansowania kredytowego
+  jest to CAPEX netto pomniejszony o kwotę kredytu; bez kredytu — pełny
+  CAPEX netto po dotacji. Brak produkcji energii.
 - **Rok 1..25** — eksploatacja
 
 Dla każdego roku eksploatacji $t$ (gdzie $t \geq 1$):
@@ -136,89 +176,104 @@ Dla każdego roku eksploatacji $t$ (gdzie $t \geq 1$):
 | Oszczędności | $E_{auto} \cdot c_{grid}(t)$ |
 | Przychód z eksportu | $E_{exp} \cdot c_{sell}(t)$ |
 | OPEX | $OPEX(t-1)$ |
-| **Net Cash Flow** | Oszczędności + Przychód − OPEX |
-| **Cumulative CF** | $\sum_{k=0}^{t} NCF_k$ |
-
-**Implementacja:** `buildCashFlowTable()` w `cashflow.ts`
+| Rata kredytu | $R$ dla $t \leq n_{kredyt}$, $0$ dla $t > n_{kredyt}$ |
+| **Przepływ netto** | Oszczędności + Przychód z eksportu − OPEX − Rata kredytu |
+| **Skumulowany przepływ** | $\sum_{k=0}^{t} CF_k$ |
 
 ---
 
-## 7. Wskaźniki efektywności (KPI)
+## 8. Wskaźniki efektywności ekonomicznej
 
-### 7.1 LCOE — Zrównoważony Koszt Energii
+### 8.1 LCOE — Znormalizowany Koszt Energii
 
 $$LCOE = \frac{\displaystyle CAPEX_{netto} + \sum_{t=1}^{n} \frac{OPEX(t)}{(1+r)^t}}{\displaystyle \sum_{t=1}^{n} \frac{E_{gen}(t)}{(1+r)^t}}$$
 
-Wynik w PLN/kWh. Powinien być znacznie niższy niż cena zakupu z sieci.
+Wynik wyrażony w PLN/kWh. Wartość powinna być istotnie niższa niż cena
+zakupu energii z sieci, co potwierdza konkurencyjność kosztową instalacji.
 
-**Implementacja:** `calculateLCOE()` w `lcoe.ts`
+**Wariant z finansowaniem kredytowym.** Gdy kredyt jest aktywny, w liczniku
+uwzględnia się wkład własny oraz zdyskontowane koszty operacyjne i raty:
 
-### 7.2 PBP — Prosty czas zwrotu
+$$LCOE_{kredyt} = \frac{\displaystyle W_0 + \sum_{t=1}^{n} \frac{OPEX(t) + R(t)}{(1+r)^t}}{\displaystyle \sum_{t=1}^{n} \frac{E_{gen}(t)}{(1+r)^t}}$$
+
+| Symbol | Znaczenie |
+|--------|-----------|
+| $W_0$ | Wkład własny właściciela (CAPEX netto minus kwota kredytu) |
+| $R(t)$ | Rata kredytu w roku $t$ (zero po upływie okresu kredytowania) |
+
+### 8.2 PBP — Prosty okres zwrotu
 
 $$PBP = t_{-} + \frac{|CF_{cum}(t_{-})|}{CF_{cum}(t_{+}) - CF_{cum}(t_{-})}$$
 
-Gdzie $t_{-}$ to ostatni rok z ujemnym skumulowanym CF, a $t_{+}$
-pierwszy rok z dodatnim. Interpolacja liniowa daje wynik ułamkowy (np. 8,3 lat).
+Gdzie $t_{-}$ to ostatni rok z ujemnym skumulowanym przepływem pieniężnym,
+a $t_{+}$ pierwszy rok z dodatnim. Interpolacja liniowa daje wynik
+ułamkowy (np. 8,3 lat).
 
-Jeśli CF nigdy nie wychodzi na plus w ciągu 25 lat — zwraca `Infinity`.
+Jeżeli skumulowany przepływ pieniężny nie osiąga wartości dodatniej
+w horyzoncie 25 lat, okres zwrotu uznaje się za nieosiągalny.
 
-**Implementacja:** `calculatePaybackPeriod()` w `cashflow.ts`
-
-### 7.3 NPV — Wartość Bieżąca Netto
+### 8.3 NPV — Wartość Bieżąca Netto
 
 $$NPV = \sum_{t=0}^{n} \frac{CF_t}{(1+r)^t}$$
 
-NPV > 0 oznacza projekt opłacalny przy danym koszcie kapitału ($r$ = WACC = 6%).
+NPV > 0 oznacza, że projekt jest opłacalny przy przyjętym koszcie
+kapitału ($r$ = WACC = 6%). Przepływy $CF_t$ uwzględniają perspektywę
+właściciela, tj. raty kredytu gdy finansowanie jest aktywne.
 
-**Implementacja:** `calculateNPV()` w `kpi.ts`
+### 8.4 IRR — Wewnętrzna Stopa Zwrotu
 
-### 7.4 IRR — Wewnętrzna Stopa Zwrotu
-
-IRR to stopa $r$ dla której:
+IRR to stopa dyskontowa $r$, dla której:
 
 $$\sum_{t=0}^{n} \frac{CF_t}{(1+r)^t} = 0$$
 
-Obliczana metodą Newtona-Raphsona (przybliżenie startowe 10%, maks. 100 iteracji).
-IRR powinna być wyższa niż oprocentowanie lokat lub kredytu.
-
-**Implementacja:** `calculateIRR()` w `kpi.ts`
-
----
-
-## 8. Stałe modelu
-
-Zdefiniowane w `constants.ts`. Wartości domyślne oparte o polski rynek (2024–2025):
-
-| Stała | Wartość | Opis |
-|-------|---------|------|
-| `PROJECT_LIFETIME` | 25 | Okres życia projektu (lata) |
-| `DISCOUNT_RATE` | 0,06 | Stopa dyskontowa / WACC |
-| `CAPEX_TIERS` | 5 500 / 5 000 / 4 500 / 4 000 | PLN/kWp wg skali |
-| `STORAGE_COST_PER_KWH` | 2 500 | PLN/kWh magazynu |
-| `OPEX_RATE` | 0,015 | OPEX jako ułamek CAPEX |
-| `OPEX_ESCALATION` | 0,02 | Roczna eskalacja OPEX |
-| `BASE_AUTOCONSUMPTION` | 0,30 / 0,40 / 0,50 | Baza wg rozmiaru gminy |
-| `STORAGE_BOOST` | 0,08 | pp autokonsumpcji na kWh/kWp |
-| `MAX_AUTOCONSUMPTION` | 0,90 | Górny limit autokonsumpcji |
+Obliczana metodą Newtona–Raphsona (przybliżenie startowe 10%,
+maks. 100 iteracji, tolerancja $10^{-6}$). IRR powinna przekraczać
+oprocentowanie alternatywnych form lokowania kapitału (lokaty, obligacje)
+lub koszt pozyskania finansowania dłużnego.
 
 ---
 
-## 9. Orkiestrator
+## 9. Stałe modelu
 
-Funkcja `runSimulation()` w `index.ts` łączy wszystkie moduły:
+Wartości domyślne oparte o polski rynek energetyki odnawialnej (2025/2026):
 
-1. Oblicza autokonsumpcję (rozmiar gminy + magazyn)
-2. Oblicza CAPEX (progi cenowe + magazyn) i nakłada dotację
-3. Buduje tabelę cash flow (25 lat z inflacją i degradacją)
-4. Oblicza KPI: LCOE, NPV, IRR, PBP
-5. Generuje produkcję miesięczną pierwszego roku
-
-Wynik (`SimulationResult`) zawiera wszystkie dane potrzebne do
-renderowania tabeli rok po roku, wykresów i podsumowania KPI.
+| Parametr | Wartość | Opis |
+|----------|---------|------|
+| Horyzont inwestycji | 25 | Okres życia projektu (lata) |
+| Stopa dyskontowa | 0,06 | WACC przyjęty do dyskontowania przepływów |
+| Progi kosztowe CAPEX | 4 000 / 3 500 / 3 200 / 2 800 | PLN/kWp wg skali instalacji |
+| Koszt magazynu energii | 2 000 | PLN/kWh pojemności |
+| Stawka OPEX | 0,01 | Roczne koszty operacyjne jako ułamek CAPEX brutto |
+| Eskalacja OPEX | 0,02 | Roczny wzrost kosztów operacyjnych |
+| Bazowa autokonsumpcja | 0,30 / 0,40 / 0,50 | Współczynnik wg rozmiaru gminy (mała/średnia/duża) |
+| Przyrost autokonsumpcji z magazynu | 0,20 | pp na każdy kWh/kWp pojemności względnej |
+| Górny limit autokonsumpcji | 0,90 | Maksymalny osiągalny współczynnik |
 
 ---
 
-## 10. Ograniczenia i uproszczenia
+## 10. Przebieg obliczeń
+
+Symulacja realizowana jest w następujących krokach:
+
+1. Wyznaczenie współczynnika autokonsumpcji na podstawie rozmiaru gminy
+   i pojemności magazynu energii
+2. Kalkulacja nakładów inwestycyjnych (progi kosztowe + magazyn)
+   z uwzględnieniem dotacji
+3. Obliczenie parametrów kredytu (kwota, rata annuitetowa) — jeśli
+   finansowanie kredytowe jest aktywne
+4. Budowa harmonogramu przepływów pieniężnych na 25 lat z uwzględnieniem
+   inflacji cen energii, degradacji paneli i rat kredytu
+5. Obliczenie wskaźników efektywności ekonomicznej: LCOE, NPV, IRR, PBP
+6. Wygenerowanie rozkładu produkcji miesięcznej dla pierwszego roku
+   eksploatacji
+
+Wynik obliczeń obejmuje pełną tabelę przepływów pieniężnych rok po roku,
+rozkład produkcji miesięcznej oraz zestaw wskaźników umożliwiających
+ocenę opłacalności inwestycji.
+
+---
+
+## 11. Ograniczenia i uproszczenia
 
 - **Brak symulacji godzinowej** — autokonsumpcja modelowana współczynnikiem
   procentowym zamiast porównania profili produkcji i zużycia godzina po godzinie.
@@ -227,5 +282,6 @@ renderowania tabeli rok po roku, wykresów i podsumowania KPI.
 - **Stały współczynnik autokonsumpcji** — nie zmienia się w ciągu życia projektu
   (w rzeczywistości profil zużycia gminy może ewoluować).
 - **CAPEX jednorazowy** — cały nakład w roku 0, brak etapowania inwestycji.
-- **Brak kosztów finansowania** — model nie uwzględnia rat kredytu; WACC
-  pełni rolę kosztu alternatywnego kapitału.
+- **Uproszczony model kredytu** — annuitet o stałej stopie procentowej,
+  bez uwzględnienia zmiennego oprocentowania, prowizji bankowych,
+  kosztów zabezpieczeń ani opłat dodatkowych.
