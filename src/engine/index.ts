@@ -1,11 +1,15 @@
 import { getAutoconsumptionRate } from "./autoconsumption";
 import { applySubsidy, calculateCapex } from "./capex";
 import { buildCashFlowTable, calculatePaybackPeriod } from "./cashflow";
-import { DISCOUNT_RATE } from "./constants";
+import {
+  DISCOUNT_RATE,
+  INVERTER_REPLACEMENT_PER_KWP,
+  INVERTER_REPLACEMENT_YEAR,
+} from "./constants";
 import { calculateIRR, calculateNPV } from "./kpi";
 import { calculateLCOE } from "./lcoe";
 import { calculateAnnualPayment } from "./loan";
-import { calculateOpex } from "./opex";
+import { calculateOpexBreakdown } from "./opex";
 import { getMonthlyProduction } from "./production";
 import type {
   MonthlyProduction,
@@ -17,7 +21,7 @@ import type {
 export { getMonthlyProduction, getAnnualProduction } from "./production";
 export { getAutoconsumptionRate } from "./autoconsumption";
 export { calculateCapex, applySubsidy } from "./capex";
-export { calculateOpex } from "./opex";
+export { calculateOpexBreakdown, calculateOpex, getInverterReplacementCost } from "./opex";
 export { calculateLCOE } from "./lcoe";
 export { calculateAnnualPayment } from "./loan";
 export { buildCashFlowTable, calculatePaybackPeriod } from "./cashflow";
@@ -28,14 +32,20 @@ export type {
   AnnualCashFlowRow,
   MonthlyProduction,
   CapexResult,
+  OpexBreakdown,
 } from "./types";
 export {
   PROJECT_LIFETIME,
   DISCOUNT_RATE,
   CAPEX_TIERS,
   STORAGE_COST_PER_KWH,
-  OPEX_RATE,
-  OPEX_ESCALATION,
+  MAINTENANCE_SERVICING_PER_KWP,
+  MAINTENANCE_INSURANCE_RATE,
+  MAINTENANCE_REPAIRS_RATE,
+  MAINTENANCE_MONITORING_FLAT,
+  MAINTENANCE_ESCALATION,
+  INVERTER_REPLACEMENT_YEAR,
+  INVERTER_REPLACEMENT_PER_KWP,
   BASE_AUTOCONSUMPTION,
   MAX_AUTOCONSUMPTION,
 } from "./constants";
@@ -62,10 +72,18 @@ export function runSimulation(input: SimulationInput): SimulationResult {
   );
   const capexAfterSubsidy = applySubsidy(totalCapex, input.donation);
 
-  // 3. OPEX pierwszego roku
-  const annualOpex = calculateOpex(totalCapex, 0);
+  // 3. OPEX pierwszego roku (rozbicie)
+  const annualOpexBreakdown = calculateOpexBreakdown(
+    totalCapex,
+    input.pvPower,
+    0,
+  );
+  const annualOpex = annualOpexBreakdown.total;
 
-  // 4. Kredyt
+  // 4. Wymiana inwertera
+  const inverterReplacementCost = input.pvPower * INVERTER_REPLACEMENT_PER_KWP;
+
+  // 5. Kredyt
   const loanPrincipal = input.loanEnabled
     ? capexAfterSubsidy * (input.loanShare / 100)
     : 0;
@@ -73,7 +91,7 @@ export function runSimulation(input: SimulationInput): SimulationResult {
     ? calculateAnnualPayment(loanPrincipal, input.loanRate, input.loanTerm)
     : 0;
 
-  // 5. Cash flow (perspektywa wlasciciela — z ratami kredytu)
+  // 6. Cash flow (perspektywa wlasciciela — z ratami kredytu)
   const cashFlowTable = buildCashFlowTable(
     input,
     capexAfterSubsidy,
@@ -83,37 +101,40 @@ export function runSimulation(input: SimulationInput): SimulationResult {
     input.loanEnabled ? input.loanTerm : 0,
   );
 
-  // 6. KPI — z tabeli CF wlasciciela
+  // 7. KPI — z tabeli CF wlasciciela
   const paybackYears = calculatePaybackPeriod(cashFlowTable);
   const npv = calculateNPV(cashFlowTable);
   const irr = calculateIRR(cashFlowTable);
 
-  // 7. LCOE — uwzglednia koszty kredytu (raty wchodza w licznik)
+  // 8. LCOE — uwzglednia koszty kredytu (raty wchodza w licznik)
   let lcoe: number;
   if (input.loanEnabled) {
-    // LCOE wlasciciela: wklad wlasny + zdyskontowane (OPEX + raty) / zdyskontowana produkcja
+    // LCOE wlasciciela: wklad wlasny + zdyskontowane (OPEX + inwerter + raty) / zdyskontowana produkcja
     const ownContribution = capexAfterSubsidy * (1 - input.loanShare / 100);
     let discountedCosts = 0;
     let discountedEnergy = 0;
     for (const row of cashFlowTable) {
       if (row.year === 0) continue;
       const df = (1 + DISCOUNT_RATE) ** row.year;
-      discountedCosts += (row.opex + row.loanPayment) / df;
+      discountedCosts +=
+        (row.opex + row.inverterReplacement + row.loanPayment) / df;
       discountedEnergy += row.energyGenerated / df;
     }
-    lcoe = discountedEnergy === 0
-      ? Infinity
-      : (ownContribution + discountedCosts) / discountedEnergy;
+    lcoe =
+      discountedEnergy === 0
+        ? Infinity
+        : (ownContribution + discountedCosts) / discountedEnergy;
   } else {
     lcoe = calculateLCOE(
       capexAfterSubsidy,
       totalCapex,
+      input.pvPower,
       input.annualYield,
       input.degradacja,
     );
   }
 
-  // 8. Produkcja miesieczna rok 1
+  // 9. Produkcja miesieczna rok 1
   const monthlyGenerated = getMonthlyProduction(
     input.monthlyYields,
     input.degradacja,
@@ -133,6 +154,9 @@ export function runSimulation(input: SimulationInput): SimulationResult {
     capexAfterSubsidy,
     storageCost,
     annualOpex,
+    annualOpexBreakdown,
+    inverterReplacementCost,
+    inverterReplacementYear: INVERTER_REPLACEMENT_YEAR,
     autoconsumptionRate,
     lcoe,
     npv,

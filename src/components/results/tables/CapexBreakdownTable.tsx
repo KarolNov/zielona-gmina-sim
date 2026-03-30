@@ -9,7 +9,7 @@ export function CapexBreakdownTable({ result }: Props) {
 	const pvCost = result.capex - result.storageCost;
 	const subsidy = result.capex - result.capexAfterSubsidy;
 
-	const rows = [
+	const capexRows = [
 		{ label: "Instalacja PV", value: pvCost },
 		...(result.storageCost > 0
 			? [{ label: "Magazyn energii", value: result.storageCost }]
@@ -23,13 +23,31 @@ export function CapexBreakdownTable({ result }: Props) {
 				{ label: "Rata roczna kredytu", value: result.loanAnnualPayment },
 			  ]
 			: []),
-		{ label: "OPEX roczny (rok 1)", value: result.annualOpex },
+	];
+
+	const b = result.annualOpexBreakdown;
+	const opexRows = [
+		{ label: "Serwisowanie / czyszczenie", value: b.servicing },
+		{ label: "Ubezpieczenie", value: b.insurance },
+		{ label: "Naprawy", value: b.repairs },
+		{ label: "Monitoring", value: b.monitoring },
+		{ label: "OPEX roczny (rok 1)", value: b.total, bold: true },
+		{ label: `Wymiana inwertera (rok ${result.inverterReplacementYear})`, value: result.inverterReplacementCost },
 	];
 
 	return (
+		<div className="space-y-4">
+			<Section title="Podsumowanie kosztów inwestycji" rows={capexRows} />
+			<Section title="Koszty utrzymania" rows={opexRows} />
+		</div>
+	);
+}
+
+function Section({ title, rows }: { title: string; rows: { label: string; value: number; bold?: boolean }[] }) {
+	return (
 		<div>
 			<p className="text-sm font-semibold text-(--sea-ink) mb-3">
-				Podsumowanie kosztów
+				{title}
 			</p>
 			<div className="overflow-hidden rounded-xl border border-(--chip-line)">
 				<table className="w-full text-sm">

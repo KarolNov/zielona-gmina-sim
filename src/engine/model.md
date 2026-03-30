@@ -114,12 +114,34 @@ $$CAPEX_{netto} = CAPEX_{brutto} \cdot \left(1 - \frac{dotacja\%}{100}\right)$$
 
 ## 5. Koszty operacyjne (OPEX)
 
-Koszty eksploatacyjne obejmują serwis techniczny, ubezpieczenie oraz
-zarządzanie instalacją. Przyjęto je na poziomie 1,0% początkowego
-CAPEX brutto rocznie, z eskalacją 2% r/r odzwierciedlającą wzrost
-kosztów usług i materiałów eksploatacyjnych:
+Koszty eksploatacyjne składają się z czterech kategorii kosztów
+powtarzalnych oraz jednorazowej wymiany inwertera.
 
-$$OPEX(t) = CAPEX_{brutto} \cdot 0{,}01 \cdot (1{,}02)^{t}$$
+### 5.1 Koszty powtarzalne (roczne)
+
+| Kategoria | Baza | Wartość | Typ |
+|-----------|------|---------|-----|
+| Serwisowanie / czyszczenie | PLN/kWp/rok | 40 | proporcjonalny do mocy |
+| Ubezpieczenie | % CAPEX brutto | 0,4% | proporcjonalny do wartości instalacji |
+| Naprawy | % CAPEX brutto | 0,2% | rezerwa na naprawy komponentów |
+| Monitoring | PLN/rok | 600 | stały (platforma monitoringu) |
+
+Każdy składnik podlega rocznej eskalacji 2% (inflacja kosztów usług
+i materiałów):
+
+$$OPEX_i(t) = OPEX_i^{bazowy} \cdot (1{,}02)^{t}$$
+
+$$OPEX(t) = \sum_i OPEX_i(t)$$
+
+### 5.2 Wymiana inwertera (jednorazowa)
+
+Inwerter wymaga wymiany po ok. 10–15 latach eksploatacji. Model
+uwzględnia jednorazowy koszt wymiany w roku 12:
+
+$$K_{inwerter} = P_{kWp} \cdot 500 \text{ PLN/kWp}$$
+
+Koszt ten jest uwzględniony w przepływach pieniężnych roku 12
+oraz w liczniku LCOE.
 
 ---
 
@@ -175,9 +197,10 @@ Dla każdego roku eksploatacji $t$ (gdzie $t \geq 1$):
 | Cena sprzedaży | $c_{sell} \cdot (1 + i)^{t-1}$ |
 | Oszczędności | $E_{auto} \cdot c_{grid}(t)$ |
 | Przychód z eksportu | $E_{exp} \cdot c_{sell}(t)$ |
-| OPEX | $OPEX(t-1)$ |
+| OPEX | $OPEX(t-1)$ (suma 4 składników z eskalacją) |
+| Wymiana inwertera | $K_{inwerter}$ w roku 12, $0$ w pozostałych |
 | Rata kredytu | $R$ dla $t \leq n_{kredyt}$, $0$ dla $t > n_{kredyt}$ |
-| **Przepływ netto** | Oszczędności + Przychód z eksportu − OPEX − Rata kredytu |
+| **Przepływ netto** | Oszczędności + Przychód z eksportu − OPEX − Inwerter − Rata kredytu |
 | **Skumulowany przepływ** | $\sum_{k=0}^{t} CF_k$ |
 
 ---
@@ -186,20 +209,25 @@ Dla każdego roku eksploatacji $t$ (gdzie $t \geq 1$):
 
 ### 8.1 LCOE — Znormalizowany Koszt Energii
 
-$$LCOE = \frac{\displaystyle CAPEX_{netto} + \sum_{t=1}^{n} \frac{OPEX(t)}{(1+r)^t}}{\displaystyle \sum_{t=1}^{n} \frac{E_{gen}(t)}{(1+r)^t}}$$
+$$LCOE = \frac{\displaystyle CAPEX_{netto} + \sum_{t=1}^{n} \frac{OPEX(t) + K_{inwerter}(t)}{(1+r)^t}}{\displaystyle \sum_{t=1}^{n} \frac{E_{gen}(t)}{(1+r)^t}}$$
+
+Gdzie $K_{inwerter}(t)$ wynosi $P_{kWp} \cdot 500$ w roku wymiany (12)
+i zero w pozostałych latach.
 
 Wynik wyrażony w PLN/kWh. Wartość powinna być istotnie niższa niż cena
 zakupu energii z sieci, co potwierdza konkurencyjność kosztową instalacji.
 
 **Wariant z finansowaniem kredytowym.** Gdy kredyt jest aktywny, w liczniku
-uwzględnia się wkład własny oraz zdyskontowane koszty operacyjne i raty:
+uwzględnia się wkład własny oraz zdyskontowane koszty operacyjne, wymianę
+inwertera i raty:
 
-$$LCOE_{kredyt} = \frac{\displaystyle W_0 + \sum_{t=1}^{n} \frac{OPEX(t) + R(t)}{(1+r)^t}}{\displaystyle \sum_{t=1}^{n} \frac{E_{gen}(t)}{(1+r)^t}}$$
+$$LCOE_{kredyt} = \frac{\displaystyle W_0 + \sum_{t=1}^{n} \frac{OPEX(t) + K_{inwerter}(t) + R(t)}{(1+r)^t}}{\displaystyle \sum_{t=1}^{n} \frac{E_{gen}(t)}{(1+r)^t}}$$
 
 | Symbol | Znaczenie |
 |--------|-----------|
 | $W_0$ | Wkład własny właściciela (CAPEX netto minus kwota kredytu) |
 | $R(t)$ | Rata kredytu w roku $t$ (zero po upływie okresu kredytowania) |
+| $K_{inwerter}(t)$ | Koszt wymiany inwertera w roku $t$ (niezerowy tylko w roku 12) |
 
 ### 8.2 PBP — Prosty okres zwrotu
 
@@ -243,8 +271,13 @@ Wartości domyślne oparte o polski rynek energetyki odnawialnej (2025/2026):
 | Stopa dyskontowa | 0,06 | WACC przyjęty do dyskontowania przepływów |
 | Progi kosztowe CAPEX | 4 000 / 3 500 / 3 200 / 2 800 | PLN/kWp wg skali instalacji |
 | Koszt magazynu energii | 2 000 | PLN/kWh pojemności |
-| Stawka OPEX | 0,01 | Roczne koszty operacyjne jako ułamek CAPEX brutto |
-| Eskalacja OPEX | 0,02 | Roczny wzrost kosztów operacyjnych |
+| Serwisowanie / czyszczenie | 40 PLN/kWp/rok | Przeglądy i czyszczenie paneli |
+| Ubezpieczenie | 0,004 | 0,4% CAPEX brutto rocznie |
+| Naprawy | 0,002 | 0,2% CAPEX brutto rocznie |
+| Monitoring | 600 PLN/rok | Stała kwota — platforma monitoringu |
+| Eskalacja kosztów utrzymania | 0,02 | Roczny wzrost kosztów operacyjnych |
+| Wymiana inwertera | 500 PLN/kWp | Jednorazowa wymiana w roku 12 |
+| Rok wymiany inwertera | 12 | Typowa żywotność inwertera |
 | Bazowa autokonsumpcja | 0,30 / 0,40 / 0,50 | Współczynnik wg rozmiaru gminy (mała/średnia/duża) |
 | Przyrost autokonsumpcji z magazynu | 0,20 | pp na każdy kWh/kWp pojemności względnej |
 | Górny limit autokonsumpcji | 0,90 | Maksymalny osiągalny współczynnik |
@@ -262,7 +295,8 @@ Symulacja realizowana jest w następujących krokach:
 3. Obliczenie parametrów kredytu (kwota, rata annuitetowa) — jeśli
    finansowanie kredytowe jest aktywne
 4. Budowa harmonogramu przepływów pieniężnych na 25 lat z uwzględnieniem
-   inflacji cen energii, degradacji paneli i rat kredytu
+   inflacji cen energii, degradacji paneli, kosztów utrzymania (4 składniki
+   z eskalacją), jednorazowej wymiany inwertera (rok 12) i rat kredytu
 5. Obliczenie wskaźników efektywności ekonomicznej: LCOE, NPV, IRR, PBP
 6. Wygenerowanie rozkładu produkcji miesięcznej dla pierwszego roku
    eksploatacji

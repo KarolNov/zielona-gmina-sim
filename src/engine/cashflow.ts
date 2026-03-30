@@ -1,14 +1,22 @@
 import { PROJECT_LIFETIME } from "./constants";
-import { calculateOpex } from "./opex";
+import { calculateOpexBreakdown, getInverterReplacementCost } from "./opex";
 import { getAnnualProduction } from "./production";
-import type { AnnualCashFlowRow, SimulationInput } from "./types";
+import type { AnnualCashFlowRow, OpexBreakdown, SimulationInput } from "./types";
+
+const ZERO_OPEX_BREAKDOWN: OpexBreakdown = {
+  servicing: 0,
+  insurance: 0,
+  repairs: 0,
+  monitoring: 0,
+  total: 0,
+};
 
 /**
  * Generuje tabele przeplywow pienieznych rok po roku na caly okres zycia projektu.
  *
  * Tabela uwzglednia perspektywe wlasciciela:
  * - Rok 0: wyplyw wkladu wlasnego (CAPEX po dotacji minus czesc kredytowana)
- * - Rok 1..n: oszczednosci + eksport - OPEX - rata kredytu
+ * - Rok 1..n: oszczednosci + eksport - OPEX - wymiana inwertera - rata kredytu
  *
  * @param input - Parametry symulacji
  * @param capexAfterSubsidy - CAPEX netto po dotacji (PLN)
@@ -42,6 +50,8 @@ export function buildCashFlowTable(
     savings: 0,
     exportRevenue: 0,
     opex: 0,
+    opexBreakdown: ZERO_OPEX_BREAKDOWN,
+    inverterReplacement: 0,
     loanPayment: 0,
     netCashFlow: -ownContribution,
     cumulativeCashFlow: -ownContribution,
@@ -68,10 +78,23 @@ export function buildCashFlowTable(
 
     const savings = energySelfConsumed * gridPrice;
     const exportRevenue = energyExported * exportPrice;
-    const opex = calculateOpex(initialCapex, year - 1);
+    const opexBreakdown = calculateOpexBreakdown(
+      initialCapex,
+      input.pvPower,
+      year - 1,
+    );
+    const inverterReplacement = getInverterReplacementCost(
+      input.pvPower,
+      year,
+    );
     const loanPayment = year <= loanTerm ? loanAnnualPayment : 0;
 
-    const netCashFlow = savings + exportRevenue - opex - loanPayment;
+    const netCashFlow =
+      savings +
+      exportRevenue -
+      opexBreakdown.total -
+      inverterReplacement -
+      loanPayment;
     const cumulativeCashFlow = prevCumulative + netCashFlow;
 
     rows.push({
@@ -81,7 +104,9 @@ export function buildCashFlowTable(
       energyExported,
       savings,
       exportRevenue,
-      opex,
+      opex: opexBreakdown.total,
+      opexBreakdown,
+      inverterReplacement,
       loanPayment,
       netCashFlow,
       cumulativeCashFlow,

@@ -46,6 +46,20 @@ export interface MonthlyProduction {
   exported: number;
 }
 
+/** Rozbicie rocznych kosztow operacyjnych na skladniki */
+export interface OpexBreakdown {
+  /** Serwisowanie i czyszczenie (PLN) */
+  servicing: number;
+  /** Ubezpieczenie (PLN) */
+  insurance: number;
+  /** Naprawy (PLN) */
+  repairs: number;
+  /** Monitoring i zuzycie wlasne (PLN) */
+  monitoring: number;
+  /** Suma rocznych kosztow operacyjnych (PLN) */
+  total: number;
+}
+
 /** Pojedynczy wiersz tabeli cash flow rok po roku */
 export interface AnnualCashFlowRow {
   year: number;
@@ -55,6 +69,10 @@ export interface AnnualCashFlowRow {
   savings: number;
   exportRevenue: number;
   opex: number;
+  /** Rozbicie OPEX na skladniki */
+  opexBreakdown: OpexBreakdown;
+  /** Koszt wymiany inwertera w danym roku (PLN), 0 poza rokiem wymiany */
+  inverterReplacement: number;
   /** Rata kredytu w danym roku (PLN), 0 jesli brak kredytu lub po splacie */
   loanPayment: number;
   netCashFlow: number;
@@ -76,6 +94,12 @@ export interface SimulationResult {
   capexAfterSubsidy: number;
   storageCost: number;
   annualOpex: number;
+  /** Rozbicie OPEX pierwszego roku na skladniki */
+  annualOpexBreakdown: OpexBreakdown;
+  /** Calkowity koszt wymiany inwertera (PLN) */
+  inverterReplacementCost: number;
+  /** Rok wymiany inwertera */
+  inverterReplacementYear: number;
   autoconsumptionRate: number;
   /** LCOE w PLN/kWh (uwzglednia koszty kredytu gdy wlaczony) */
   lcoe: number;

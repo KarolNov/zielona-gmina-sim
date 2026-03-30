@@ -1,33 +1,82 @@
-import { OPEX_ESCALATION, OPEX_RATE } from "./constants";
+import {
+  INVERTER_REPLACEMENT_PER_KWP,
+  INVERTER_REPLACEMENT_YEAR,
+  MAINTENANCE_ESCALATION,
+  MAINTENANCE_INSURANCE_RATE,
+  MAINTENANCE_MONITORING_FLAT,
+  MAINTENANCE_REPAIRS_RATE,
+  MAINTENANCE_SERVICING_PER_KWP,
+} from "./constants";
+import type { OpexBreakdown } from "./types";
 
 /**
- * Oblicza roczne koszty operacyjne (OPEX) dla danego roku projektu.
+ * Oblicza szczegolowe roczne koszty operacyjne (OPEX) dla danego roku projektu.
  *
- * OPEX stanowi procent poczatkowego CAPEX i rosnie rocznie
- * o wspolczynnik eskalacji (inflacja kosztow serwisu, ubezpieczen itp.).
+ * Skladniki:
+ * - Serwisowanie / czyszczenie — proporcjonalnie do mocy (PLN/kWp)
+ * - Ubezpieczenie — procent CAPEX brutto
+ * - Naprawy — procent CAPEX brutto
+ * - Monitoring — stala kwota roczna
  *
- * Formula: `OPEX(t) = CAPEX_initial × opexRate × (1 + eskalacja)^t`
+ * Kazdy skladnik podlega rocznej eskalacji (inflacja).
  *
- * @param initialCapex - Calkowity CAPEX (przed dotacja) w PLN — baza do obliczen OPEX
- * @param year - Rok projektu (0 = pierwszy rok eksploatacji)
- * @param opexRate - OPEX jako ulamek CAPEX rocznie (domyslnie 0.015 = 1.5%)
- * @param opexEscalation - Roczna eskalacja OPEX (domyslnie 0.02 = 2%)
- * @returns Koszt OPEX w danym roku (PLN)
+ * @param initialCapex - CAPEX brutto (PLN) — baza dla skladnikow procentowych
+ * @param pvPowerKwp - Moc zainstalowana (kWp) — baza dla skladnikow per-kWp
+ * @param year - Rok eksploatacji (0 = pierwszy rok)
+ * @param escalation - Roczna eskalacja kosztow (domyslnie 2%)
+ * @returns Rozbicie OPEX na skladniki z suma
+ */
+export function calculateOpexBreakdown(
+  initialCapex: number,
+  pvPowerKwp: number,
+  year: number,
+  escalation: number = MAINTENANCE_ESCALATION,
+): OpexBreakdown {
+  const esc = Math.pow(1 + escalation, year);
+
+  const servicing = pvPowerKwp * MAINTENANCE_SERVICING_PER_KWP * esc;
+  const insurance = initialCapex * MAINTENANCE_INSURANCE_RATE * esc;
+  const repairs = initialCapex * MAINTENANCE_REPAIRS_RATE * esc;
+  const monitoring = MAINTENANCE_MONITORING_FLAT * esc;
+
+  return {
+    servicing,
+    insurance,
+    repairs,
+    monitoring,
+    total: servicing + insurance + repairs + monitoring,
+  };
+}
+
+/**
+ * Zwraca calkowity OPEX (suma skladnikow) — wrapper kompatybilny wstecz.
  *
- * @example
- * ```ts
- * calculateOpex(500_000, 0);
- * // => 500_000 * 0.015 * (1.02)^0 = 7_500 PLN
- *
- * calculateOpex(500_000, 10);
- * // => 500_000 * 0.015 * (1.02)^10 ≈ 9_142 PLN
- * ```
+ * @deprecated Uzyj `calculateOpexBreakdown` dla pelnego rozbicia.
  */
 export function calculateOpex(
   initialCapex: number,
+  pvPowerKwp: number,
   year: number,
-  opexRate: number = OPEX_RATE,
-  opexEscalation: number = OPEX_ESCALATION,
+  escalation: number = MAINTENANCE_ESCALATION,
 ): number {
-  return initialCapex * opexRate * Math.pow(1 + opexEscalation, year);
+  return calculateOpexBreakdown(initialCapex, pvPowerKwp, year, escalation)
+    .total;
+}
+
+/**
+ * Zwraca koszt wymiany inwertera jesli dany rok to rok wymiany, w przeciwnym razie 0.
+ *
+ * @param pvPowerKwp - Moc zainstalowana (kWp)
+ * @param year - Rok projektu (1-based, rok 1 = pierwszy rok eksploatacji)
+ * @param replacementYear - Rok wymiany (domyslnie 12)
+ * @returns Koszt wymiany w PLN (0 poza rokiem wymiany)
+ */
+export function getInverterReplacementCost(
+  pvPowerKwp: number,
+  year: number,
+  replacementYear: number = INVERTER_REPLACEMENT_YEAR,
+): number {
+  return year === replacementYear
+    ? pvPowerKwp * INVERTER_REPLACEMENT_PER_KWP
+    : 0;
 }
