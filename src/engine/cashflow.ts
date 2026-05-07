@@ -1,4 +1,4 @@
-import { PROJECT_LIFETIME } from "./constants";
+import { NET_METERING_RATIO, PROJECT_LIFETIME } from "./constants";
 import { calculateOpexBreakdown, getInverterReplacementCost } from "./opex";
 import { getAnnualProduction } from "./production";
 import type { AnnualCashFlowRow, OpexBreakdown, SimulationInput } from "./types";
@@ -56,7 +56,7 @@ export function buildCashFlowTable(
     netCashFlow: -ownContribution,
     cumulativeCashFlow: -ownContribution,
     gridPrice: input.cenaEnergii,
-    exportPrice: input.cenaSprzedazy,
+    exportPrice: NET_METERING_RATIO * input.cenaEnergiiImport,
   });
 
   for (let year = 1; year <= lifetime; year++) {
@@ -73,10 +73,14 @@ export function buildCashFlowTable(
 
     const gridPrice =
       input.cenaEnergii * (1 + input.inflacjaEnergii) ** (year - 1);
-    const exportPrice =
-      input.cenaSprzedazy * (1 + input.inflacjaEnergii) ** (year - 1);
+    const importPrice =
+      input.cenaEnergiiImport * (1 + input.inflacjaEnergii) ** (year - 1);
+    // Opust 1:0,6 (Ustawa o OZE art. 38c): za kazdy 1 kWh eksportu
+    // mozna odebrac NET_METERING_RATIO kWh bezplatnie po cenie importowej
+    const exportPrice = NET_METERING_RATIO * importPrice;
 
-    const savings = energySelfConsumed * gridPrice;
+    // Self-consumed energy saves from buying at the higher prosumer import price
+    const savings = energySelfConsumed * importPrice;
     const exportRevenue = energyExported * exportPrice;
     const opexBreakdown = calculateOpexBreakdown(
       initialCapex,

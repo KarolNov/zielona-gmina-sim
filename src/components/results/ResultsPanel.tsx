@@ -1,16 +1,18 @@
 import { useState } from "react";
-import type { SimulationResult } from "#/engine";
+import type { SimulationInput, SimulationResult } from "#/engine";
 import { TabBar, type ResultTab } from "./TabBar";
 import { KpiTab } from "./tabs/KpiTab";
 import { ChartsTab } from "./tabs/ChartsTab";
 import { TablesTab } from "./tabs/TablesTab";
+import { SensitivityTab } from "./tabs/SensitivityTab";
 
 interface ResultsPanelProps {
 	result: SimulationResult;
 	cenaEnergii: number;
+	simulationInput: SimulationInput;
 }
 
-export function ResultsPanel({ result, cenaEnergii }: ResultsPanelProps) {
+export function ResultsPanel({ result, cenaEnergii, simulationInput }: ResultsPanelProps) {
 	const [tab, setTab] = useState<ResultTab>("kpi");
 
 	return (
@@ -20,6 +22,12 @@ export function ResultsPanel({ result, cenaEnergii }: ResultsPanelProps) {
 			{tab === "kpi" && <KpiTab result={result} cenaEnergii={cenaEnergii} />}
 			{tab === "charts" && <ChartsTab result={result} />}
 			{tab === "tables" && <TablesTab result={result} />}
+			{tab === "sensitivity" && (
+				<SensitivityTab
+					input={simulationInput}
+					modelRate={result.autoconsumptionRate}
+				/>
+			)}
 		</section>
 	);
 }

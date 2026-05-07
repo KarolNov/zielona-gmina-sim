@@ -35,6 +35,15 @@ export type {
   OpexBreakdown,
 } from "./types";
 export {
+  runSensitivityAnalysis,
+  runPriceScenarioSensitivity,
+  DEFAULT_PRICE_SCENARIOS,
+  type SensitivityPoint,
+  type SensitivityResult,
+  type PriceScenario,
+  type PriceScenarioResult,
+} from "./sensitivity";
+export {
   PROJECT_LIFETIME,
   DISCOUNT_RATE,
   CAPEX_TIERS,
@@ -48,6 +57,7 @@ export {
   INVERTER_REPLACEMENT_PER_KWP,
   BASE_AUTOCONSUMPTION,
   MAX_AUTOCONSUMPTION,
+  NET_METERING_RATIO,
 } from "./constants";
 
 /**

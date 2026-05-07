@@ -7,7 +7,7 @@ function baseInput(overrides: Partial<SimulationInput> = {}): SimulationInput {
     pvPower: 100,
     degradacja: 0.005,
     cenaEnergii: 1.2,
-    cenaSprzedazy: 0.4,
+    cenaEnergiiImport: 1.4,
     inflacjaEnergii: 0.03,
     donation: 0,
     storageEnabled: false,
@@ -45,13 +45,13 @@ describe('finance invariants', () => {
     const noLoan = runSimulation(baseInput({
       loanEnabled: false,
       cenaEnergii: 3.0,
-      cenaSprzedazy: 1.5,
+      cenaEnergiiImport: 3.5,
     }));
     const withLoan = runSimulation(baseInput({
       loanEnabled: true,
       loanShare: 80,
       cenaEnergii: 3.0,
-      cenaSprzedazy: 1.5,
+      cenaEnergiiImport: 3.5,
     }));
 
     // Both should be finite with these high prices.

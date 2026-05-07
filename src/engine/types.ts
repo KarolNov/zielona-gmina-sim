@@ -6,10 +6,10 @@ export interface SimulationInput {
   pvPower: number;
   /** Roczna degradacja paneli jako ulamek dziesietny (np. 0.005 = 0.5%) */
   degradacja: number;
-  /** Cena zakupu energii z sieci w PLN/kWh */
+  /** Cena zakupu energii z sieci w PLN/kWh (referencyjna, bez PV) */
   cenaEnergii: number;
-  /** Cena sprzedazy nadwyzek w PLN/kWh */
-  cenaSprzedazy: number;
+  /** Cena importu energii dla prosumenta w PLN/kWh (z narzutami dystrybutora) */
+  cenaEnergiiImport: number;
   /** Roczna inflacja ceny energii jako ulamek dziesietny (np. 0.03 = 3%) */
   inflacjaEnergii: number;
   /** Dofinansowanie jako procent CAPEX (0-100) */

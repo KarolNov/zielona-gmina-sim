@@ -72,3 +72,12 @@ export const STORAGE_AUTOCONSUMPTION_BOOST_PER_KWH_PER_KWP = 0.20;
 
 /** Maksymalny wspolczynnik autokonsumpcji (cap) */
 export const MAX_AUTOCONSUMPTION = 0.9;
+
+/**
+ * Wspolczynnik opustu dla spoldzielni energetycznej (stosunek 1:0,6).
+ *
+ * Wynika z art. 38c Ustawy o OZE (Dz.U. 2015 poz. 478 z pozn. zm.):
+ * za kazde 1 kWh wprowadzone do sieci przez spoldzielnie, jej czlonkowie
+ * moga odebrac 0,6 kWh bez oplat za energie i zmiennych oplat dystrybucyjnych.
+ */
+export const NET_METERING_RATIO = 0.6;
