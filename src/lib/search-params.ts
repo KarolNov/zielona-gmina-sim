@@ -1,7 +1,7 @@
 import { CommuneType } from "#/lib/types";
 
 export const searchDefaults = {
-	communeSize: CommuneType.SMALL,
+	communeSize: CommuneType.MEDIUM,
 	donation: 0,
 	pvPower: 200,
 	storageEnabled: false,
