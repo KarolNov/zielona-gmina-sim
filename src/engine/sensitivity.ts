@@ -1,10 +1,11 @@
 import { applySubsidy, calculateCapex } from "./capex";
 import { buildCashFlowTable, calculatePaybackPeriod } from "./cashflow";
 import {
+  AC_NO_STORAGE_BASELINE,
+  AC_STORAGE_ASYMPTOTE,
   DISCOUNT_RATE,
   MAX_AUTOCONSUMPTION,
-  STORAGE_AUTOCONSUMPTION_BOOST_PER_KWH_PER_KWP,
-  STORAGE_FREE_AC_THRESHOLD,
+  STORAGE_REQUIREMENT_SCALE_KWH_PER_KWP,
 } from "./constants";
 import { calculateIRR, calculateNPV } from "./kpi";
 import { calculateLCOE } from "./lcoe";
@@ -14,18 +15,25 @@ import type { SimulationInput } from "./types";
 /**
  * Storage capacity (kWh) needed to reach a target AC level.
  *
- * Up to STORAGE_FREE_AC_THRESHOLD (~70%) the AC level is assumed achievable
- * through load scheduling alone (no battery). Above that threshold each
- * additional point of AC requires linearly more storage capacity.
+ * Saturating logarithmic model:
+ *   storage_per_kwp = SCALE × (−ln(1 − (target − baseline)/(asymptote − baseline)))
+ *
+ * - Below AC_NO_STORAGE_BASELINE: no storage (load scheduling alone)
+ * - Above baseline: each pp of AC costs progressively more storage
+ * - Approaches infinity near AC_STORAGE_ASYMPTOTE — natural saturation
+ *
+ * No hard knee: marginal storage per pp grows smoothly with target AC,
+ * which produces a soft flattening on the PBP/NPV curve at high AC.
  */
 function storageNeededForRate(targetRate: number, pvPower: number): number {
-  if (targetRate <= STORAGE_FREE_AC_THRESHOLD) return 0;
+  if (targetRate <= AC_NO_STORAGE_BASELINE) return 0;
   const cappedTarget = Math.min(targetRate, MAX_AUTOCONSUMPTION);
-  return (
-    ((cappedTarget - STORAGE_FREE_AC_THRESHOLD) /
-      STORAGE_AUTOCONSUMPTION_BOOST_PER_KWH_PER_KWP) *
-    pvPower
+  const fraction = Math.min(
+    (cappedTarget - AC_NO_STORAGE_BASELINE) /
+      (AC_STORAGE_ASYMPTOTE - AC_NO_STORAGE_BASELINE),
+    0.99,
   );
+  return -Math.log(1 - fraction) * STORAGE_REQUIREMENT_SCALE_KWH_PER_KWP * pvPower;
 }
 
 /** Single data point in the sensitivity sweep */

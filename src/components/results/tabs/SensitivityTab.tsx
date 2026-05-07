@@ -319,13 +319,21 @@ export function SensitivityTab({ input, modelRate }: SensitivityTabProps) {
 
 	return (
 		<div className="space-y-6">
-			<div className="rounded-xl border border-(--chip-line) bg-(--chip-bg) p-4">
+			<div className="rounded-xl border border-(--chip-line) bg-(--chip-bg) p-4 space-y-2">
 				<p className="text-sm text-(--sea-ink-soft)">
 					Analiza pokazuje jak zmiana wskaźnika autokonsumpcji wpływa na
 					opłacalność inwestycji. Linia przerywana oznacza wartość przyjętą
 					przez model ({rateLabel(modelRate)}) na podstawie rozmiaru gminy i
-					magazynu energii. W rzeczywistości wskaźnik autokonsumpcji zależy od
-					profilu zużycia, sezonowości i dopasowania obciążeń do generacji PV.
+					magazynu energii.
+				</p>
+				<p className="text-xs text-(--sea-ink-soft)">
+					Model kosztu osiągnięcia AC: do ~50% — sam harmonogram obciążeń
+					(pompownie, oświetlenie). Powyżej — automatycznie dobierany
+					magazyn energii o pojemności rosnącej logarytmicznie z target AC
+					(<code>storage = SCALE × −ln(1 − Δ/(0,95 − 0,5)) × kWp</code>).
+					Każdy kolejny pp AC kosztuje więcej niż poprzedni — krzywa
+					nasyca się w okolicy 85–90%, gdzie marginalny koszt magazynu
+					przewyższa marginalny przychód z autokonsumpcji.
 				</p>
 			</div>
 
