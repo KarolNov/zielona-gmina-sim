@@ -74,6 +74,18 @@ export const STORAGE_AUTOCONSUMPTION_BOOST_PER_KWH_PER_KWP = 0.20;
 export const MAX_AUTOCONSUMPTION = 0.9;
 
 /**
+ * Prog autokonsumpcji osiagalny bez magazynu energii.
+ *
+ * Do ~70% mozna dojsc poprzez harmonogramowanie obciazen i dopasowanie
+ * profilu zuzycia (pompownie wod-kan, oswietlenie uliczne, ogrzewanie
+ * obiektow uzytecznosci publicznej). Powyzej tego progu wymagany jest
+ * magazyn energii do peak-shavingu wieczornego/nocnego — co wprowadza
+ * istotny koszt jednostkowy i sprawia, ze dalsze podnoszenie AC
+ * przestaje sie oplacac.
+ */
+export const STORAGE_FREE_AC_THRESHOLD = 0.7;
+
+/**
  * Wspolczynnik opustu dla spoldzielni energetycznej (stosunek 1:0,6).
  *
  * Wynika z art. 38c Ustawy o OZE (Dz.U. 2015 poz. 478 z pozn. zm.):

@@ -1,10 +1,10 @@
 import { applySubsidy, calculateCapex } from "./capex";
 import { buildCashFlowTable, calculatePaybackPeriod } from "./cashflow";
 import {
-  BASE_AUTOCONSUMPTION,
   DISCOUNT_RATE,
   MAX_AUTOCONSUMPTION,
   STORAGE_AUTOCONSUMPTION_BOOST_PER_KWH_PER_KWP,
+  STORAGE_FREE_AC_THRESHOLD,
 } from "./constants";
 import { calculateIRR, calculateNPV } from "./kpi";
 import { calculateLCOE } from "./lcoe";
@@ -12,19 +12,17 @@ import { calculateAnnualPayment } from "./loan";
 import type { SimulationInput } from "./types";
 
 /**
- * Inverse of getAutoconsumptionRate: given a target AC level, return the
- * storage capacity (kWh) needed to reach it. Returns 0 when the target is
- * at or below the size-based base rate (no storage required).
+ * Storage capacity (kWh) needed to reach a target AC level.
+ *
+ * Up to STORAGE_FREE_AC_THRESHOLD (~70%) the AC level is assumed achievable
+ * through load scheduling alone (no battery). Above that threshold each
+ * additional point of AC requires linearly more storage capacity.
  */
-function storageNeededForRate(
-  targetRate: number,
-  baseRate: number,
-  pvPower: number,
-): number {
-  if (targetRate <= baseRate) return 0;
+function storageNeededForRate(targetRate: number, pvPower: number): number {
+  if (targetRate <= STORAGE_FREE_AC_THRESHOLD) return 0;
   const cappedTarget = Math.min(targetRate, MAX_AUTOCONSUMPTION);
   return (
-    ((cappedTarget - baseRate) /
+    ((cappedTarget - STORAGE_FREE_AC_THRESHOLD) /
       STORAGE_AUTOCONSUMPTION_BOOST_PER_KWH_PER_KWP) *
     pvPower
   );
@@ -67,27 +65,19 @@ export interface SensitivityPointWithStorage extends SensitivityPoint {
  * Runs a sensitivity sweep: re-computes all KPIs for a range of
  * autoconsumption rates while modelling the cost of reaching each level.
  *
- * For target AC above the size-based base rate, the sweep adds the storage
- * capacity needed to bridge the gap (inverse of getAutoconsumptionRate)
- * and folds its CAPEX/OPEX/loan implications into the cash flow.
- *
- * Below base rate the install matches the user-supplied storage; storage
- * is set to 0 because the lower AC is treated as a pessimistic load profile,
- * not a deliberate over-export.
- *
- * Net effect: the curve shows diminishing marginal returns — high AC levels
- * (≥70%) require disproportionately large storage that eats the extra
- * self-consumption revenue.
+ * Up to STORAGE_FREE_AC_THRESHOLD (~70%) AC is treated as achievable
+ * through load scheduling — no extra CAPEX. Above that threshold the
+ * sweep auto-sizes a battery, adds its CAPEX/OPEX/loan implications to
+ * the cash flow, and the curve enters the diminishing-returns regime
+ * where extra self-consumption revenue is offset by storage cost.
  */
 export function runSensitivityAnalysis(
   input: SimulationInput,
   modelRate: number,
   steps: number[] = defaultSteps(),
 ): SensitivityResult {
-  const baseRate = BASE_AUTOCONSUMPTION[input.communeSize] ?? 0.3;
-
   const points: SensitivityPointWithStorage[] = steps.map((rate) => {
-    const requiredStorage = storageNeededForRate(rate, baseRate, input.pvPower);
+    const requiredStorage = storageNeededForRate(rate, input.pvPower);
     const { totalCapex } = calculateCapex(input.pvPower, requiredStorage);
     const capexAfterSubsidy = applySubsidy(totalCapex, input.donation);
 
