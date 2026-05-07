@@ -17,7 +17,6 @@ import { fetchSolarSummary } from "#/lib/fetch";
 import { num, type SearchParams, searchDefaults } from "#/lib/search-params";
 import { CommuneType } from "#/lib/types";
 import { cenaEnergiiSchema } from "#/lib/validators/cena-energii";
-import { cenaSprzedazySchema } from "#/lib/validators/cena-sprzedazy";
 import { degradacjaSchema } from "#/lib/validators/degradacja";
 import { donationSchema } from "#/lib/validators/donation";
 import { inflacjaSchema } from "#/lib/validators/inflacja";
@@ -25,7 +24,6 @@ import { getPvPowerSchema } from "#/lib/validators/pv-power";
 import { valibotValidator } from "#/lib/validators/valibot";
 import {
 	warnCenaEnergii,
-	warnCenaSprzedazy,
 	warnDegradacja,
 	warnDonation,
 	warnInflacja,
@@ -52,7 +50,8 @@ export const Route = createFileRoute("/")({
 		degradacja: num(raw.degradacja, searchDefaults.degradacja),
 		katNachylenia: num(raw.katNachylenia, searchDefaults.katNachylenia),
 		cenaEnergii: num(raw.cenaEnergii, searchDefaults.cenaEnergii),
-		cenaSprzedazy: num(raw.cenaSprzedazy, searchDefaults.cenaSprzedazy),
+		cenaEnergiiImport: num(raw.cenaEnergiiImport, searchDefaults.cenaEnergiiImport),
+		annualDemand: num(raw.annualDemand, searchDefaults.annualDemand),
 		inflacjaEnergii: num(raw.inflacjaEnergii, searchDefaults.inflacjaEnergii),
 		loanEnabled: raw.loanEnabled === true || raw.loanEnabled === "true",
 		loanRate: num(raw.loanRate, searchDefaults.loanRate),
@@ -89,7 +88,8 @@ function App() {
 		degradacja,
 		katNachylenia,
 		cenaEnergii,
-		cenaSprzedazy,
+		cenaEnergiiImport,
+		annualDemand,
 		inflacjaEnergii,
 		loanEnabled,
 		loanRate,
@@ -143,38 +143,43 @@ function App() {
 	const [simulationResult, setSimulationResult] = useState<
 		import("#/engine").SimulationResult | null
 	>(null);
+	const [lastSimInput, setLastSimInput] = useState<
+		import("#/engine").SimulationInput | null
+	>(null);
 
 	const runSim = useCallback(() => {
 		refetchSolarData({
 			cancelRefetch: true
 		}).then(({ data: solarData }) => {
 			if (!solarData) return;
-			setSimulationResult(
-				runSimulation({
-					pvPower,
-					degradacja: degradacja / 100,
-					cenaEnergii,
-					cenaSprzedazy,
-					inflacjaEnergii: inflacjaEnergii / 100,
-					donation,
-					storageEnabled,
-					storageCapacity: storageEnabled ? storageCapacity : 0,
-					communeSize,
-					monthlyYields: solarData.monthlyYields,
-					annualYield: solarData.annualYield,
-					loanEnabled,
-					loanRate: loanRate / 100,
-					loanTerm,
-					loanShare,
-				}),
-			);
+			const simInput: import("#/engine").SimulationInput = {
+				pvPower,
+				degradacja: degradacja / 100,
+				cenaEnergii,
+				cenaEnergiiImport,
+				annualDemand,
+				inflacjaEnergii: inflacjaEnergii / 100,
+				donation,
+				storageEnabled,
+				storageCapacity: storageEnabled ? storageCapacity : 0,
+				communeSize,
+				monthlyYields: solarData.monthlyYields,
+				annualYield: solarData.annualYield,
+				loanEnabled,
+				loanRate: loanRate / 100,
+				loanTerm,
+				loanShare,
+			};
+			setLastSimInput(simInput);
+			setSimulationResult(runSimulation(simInput));
 		});
 	}, [
 		refetchSolarData,
 		pvPower,
 		degradacja,
 		cenaEnergii,
-		cenaSprzedazy,
+		cenaEnergiiImport,
+		annualDemand,
 		inflacjaEnergii,
 		donation,
 		storageEnabled,
@@ -384,17 +389,40 @@ function App() {
 							id="cenaEnergii"
 						/>
 						<NumberInput
-							label="Cena sprzedaży nadwyżek (PLN/kWh)"
-							value={cenaSprzedazy}
-							onChange={(v) => setParam("cenaSprzedazy", v)}
-							min={0}
+							label="Cena importu energii dla prosumenta (PLN/kWh)"
+							value={cenaEnergiiImport}
+							onChange={(v) => setParam("cenaEnergiiImport", v)}
+							min={0.1}
 							max={3}
 							step={0.01}
 							decimal={2}
-							validator={valibotValidator(cenaSprzedazySchema)}
-							warning={warnCenaSprzedazy(cenaSprzedazy, cenaEnergii)}
-							name="cenaSprzedazy"
-							id="cenaSprzedazy"
+							validator={valibotValidator(cenaEnergiiSchema)}
+							warning={cenaEnergiiImport < cenaEnergii ? "Cena importu niższa od ceny bazowej — dystrybutorzy zwykle naliczają wyższe marże prosumentom" : cenaEnergiiImport > cenaEnergii * 1.5 ? `Marża prosumencka ${((cenaEnergiiImport / cenaEnergii - 1) * 100).toFixed(0)}% — typowy zakres to 10–30%` : null}
+							name="cenaEnergiiImport"
+							id="cenaEnergiiImport"
+						/>
+						<div className="rounded-xl border border-(--chip-line) bg-(--chip-bg) px-4 py-3">
+							<p className="text-xs text-(--sea-ink-soft) uppercase tracking-wider mb-1">
+								Współczynnik opustu (stały)
+							</p>
+							<p className="text-sm font-semibold text-(--sea-ink)">1 : 0,6</p>
+							<p className="text-xs text-(--sea-ink-soft) mt-1">
+								Za każdą 1 kWh wprowadzoną do sieci spółdzielnia może odebrać 0,6 kWh
+								bez opłat za energię i zmiennych opłat dystrybucyjnych
+								(art. 38c Ustawy o OZE, Dz.U. 2015 poz. 478).
+							</p>
+						</div>
+						<NumberInput
+							label="Roczne zapotrzebowanie gminy (MWh/rok)"
+							value={annualDemand}
+							onChange={(v) => setParam("annualDemand", v)}
+							min={1}
+							max={100000}
+							step={10}
+							decimal={0}
+							warning={annualDemand < pvPower * 1 ? `Zapotrzebowanie ${annualDemand} MWh/rok jest niskie względem ${pvPower} kWp PV (~${Math.round(pvPower)} MWh/rok produkcji) — większość energii pójdzie na eksport` : null}
+							name="annualDemand"
+							id="annualDemand"
 						/>
 						<NumberInput
 							label="Inflacja ceny energii (%/rok)"
@@ -530,8 +558,8 @@ function App() {
 				</button>
 			</div>
 
-			{simulationResult && (
-				<ResultsPanel result={simulationResult} cenaEnergii={cenaEnergii} />
+			{simulationResult && lastSimInput && (
+				<ResultsPanel result={simulationResult} cenaEnergii={cenaEnergii} simulationInput={lastSimInput} />
 			)}
 		</main>
 	);

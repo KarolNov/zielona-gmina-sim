@@ -1,11 +1,11 @@
 import {
   INVERTER_REPLACEMENT_PER_KWP,
-  INVERTER_REPLACEMENT_YEAR,
   MAINTENANCE_ESCALATION,
   MAINTENANCE_INSURANCE_RATE,
   MAINTENANCE_MONITORING_FLAT,
   MAINTENANCE_REPAIRS_RATE,
   MAINTENANCE_SERVICING_PER_KWP,
+  PROJECT_LIFETIME,
 } from "./constants";
 import type { OpexBreakdown } from "./types";
 
@@ -17,8 +17,10 @@ import type { OpexBreakdown } from "./types";
  * - Ubezpieczenie — procent CAPEX brutto
  * - Naprawy — procent CAPEX brutto
  * - Monitoring — stala kwota roczna
+ * - Rezerwa na wymiane inwertera — amortyzowany koszt wymiany rozlozony
+ *   na caly okres zycia projektu (sinking fund), bez eskalacji.
  *
- * Kazdy skladnik podlega rocznej eskalacji (inflacja).
+ * Skladniki utrzymania (poza rezerwa) podlegaja rocznej eskalacji.
  *
  * @param initialCapex - CAPEX brutto (PLN) — baza dla skladnikow procentowych
  * @param pvPowerKwp - Moc zainstalowana (kWp) — baza dla skladnikow per-kWp
@@ -38,13 +40,16 @@ export function calculateOpexBreakdown(
   const insurance = initialCapex * MAINTENANCE_INSURANCE_RATE * esc;
   const repairs = initialCapex * MAINTENANCE_REPAIRS_RATE * esc;
   const monitoring = MAINTENANCE_MONITORING_FLAT * esc;
+  const inverterReserve =
+    (pvPowerKwp * INVERTER_REPLACEMENT_PER_KWP) / PROJECT_LIFETIME;
 
   return {
     servicing,
     insurance,
     repairs,
     monitoring,
-    total: servicing + insurance + repairs + monitoring,
+    inverterReserve,
+    total: servicing + insurance + repairs + monitoring + inverterReserve,
   };
 }
 
@@ -61,22 +66,4 @@ export function calculateOpex(
 ): number {
   return calculateOpexBreakdown(initialCapex, pvPowerKwp, year, escalation)
     .total;
-}
-
-/**
- * Zwraca koszt wymiany inwertera jesli dany rok to rok wymiany, w przeciwnym razie 0.
- *
- * @param pvPowerKwp - Moc zainstalowana (kWp)
- * @param year - Rok projektu (1-based, rok 1 = pierwszy rok eksploatacji)
- * @param replacementYear - Rok wymiany (domyslnie 12)
- * @returns Koszt wymiany w PLN (0 poza rokiem wymiany)
- */
-export function getInverterReplacementCost(
-  pvPowerKwp: number,
-  year: number,
-  replacementYear: number = INVERTER_REPLACEMENT_YEAR,
-): number {
-  return year === replacementYear
-    ? pvPowerKwp * INVERTER_REPLACEMENT_PER_KWP
-    : 0;
 }

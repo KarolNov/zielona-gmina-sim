@@ -10,7 +10,6 @@ function fmt(v: number, decimals = 0) {
 
 export function CashFlowTable({ cashFlowTable }: Props) {
 	const hasLoan = cashFlowTable.some((r) => r.loanPayment > 0);
-	const hasInverter = cashFlowTable.some((r) => r.inverterReplacement > 0);
 
 	return (
 		<div>
@@ -42,11 +41,6 @@ export function CashFlowTable({ cashFlowTable }: Props) {
 							<th className="px-3 py-2 text-right font-semibold uppercase tracking-wider text-(--sea-ink-soft)">
 								OPEX
 							</th>
-							{hasInverter && (
-								<th className="px-3 py-2 text-right font-semibold uppercase tracking-wider text-(--sea-ink-soft)">
-									Inwerter
-								</th>
-							)}
 							{hasLoan && (
 								<th className="px-3 py-2 text-right font-semibold uppercase tracking-wider text-(--sea-ink-soft)">
 									Kredyt
@@ -89,11 +83,6 @@ export function CashFlowTable({ cashFlowTable }: Props) {
 								<td className="px-3 py-1.5 text-right tabular-nums text-(--sea-ink)">
 									{fmt(row.opex)}
 								</td>
-								{hasInverter && (
-									<td className="px-3 py-1.5 text-right tabular-nums text-(--sea-ink)">
-										{row.inverterReplacement > 0 ? fmt(row.inverterReplacement) : "—"}
-									</td>
-								)}
 								{hasLoan && (
 									<td className="px-3 py-1.5 text-right tabular-nums text-(--sea-ink)">
 										{row.loanPayment > 0 ? fmt(row.loanPayment) : "—"}

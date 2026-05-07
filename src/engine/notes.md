@@ -20,12 +20,26 @@
 
 ## Kontekst prawny (PL)
 
-- Spółdzielnie energetyczne korzystają z systemu depozytu prosumenckiego.
+- Spółdzielnie energetyczne korzystają z systemu **depozytu prosumenckiego (opust 1:0,6)**
+  — art. 38c Ustawy o OZE (Dz.U. 2015 poz. 478 z późn. zm.). Za każde 1 kWh
+  oddane do sieci członkowie spółdzielni odbierają 0,6 kWh bez opłat za
+  energię i zmiennych opłat dystrybucyjnych.
+- **Narzut prosumencki w taryfach.** Sprzedawcy stosują wyższe ceny
+  zakupu energii dla odbiorców z własnym źródłem (taryfa prosumencka,
+  opłata jakościowa, narzut handlowy). Model różnicuje cenę bazową
+  $c_{base}$ i cenę importu $c_{imp}$ (zwykle +10–20%).
 - **Dofinansowania:** NFOŚiGW „Energia dla Wsi", KPO (do 80–90% na etap przedinwestycyjny).
 - **Ulgi:** zwolnienie z opłaty OZE, opłaty kogeneracyjnej i części opłat dystrybucyjnych zmiennych.
+
+## Źródła cen energii
+
+- **URE (Urząd Regulacji Energetyki)** — taryfy zatwierdzone (G11, C11, C12) i ceny obrotu.
+- **TGE (Towarowa Giełda Energii)** — ceny hurtowe RDN.
+- **Faktury własne / przetargi gminne** — realny narzut prosumencki dla konkretnych OSD.
 
 ## Potencjalne rozszerzenia (TODO)
 
 - Symulacja godzinowa (profil produkcji vs. profil zużycia) zamiast stałego współczynnika autokonsumpcji.
-- Asymetryczna inflacja (osobna stopa dla ceny zakupu i sprzedaży).
+- Asymetryczna inflacja (osobne stopy dla ceny bazowej i prosumenckiej).
 - Etapowanie CAPEX (rozłożenie inwestycji na kilka lat).
+- Modelowanie zmian regulacyjnych narzutu prosumenckiego w czasie.

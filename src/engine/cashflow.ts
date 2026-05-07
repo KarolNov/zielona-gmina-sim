@@ -1,5 +1,5 @@
-import { PROJECT_LIFETIME } from "./constants";
-import { calculateOpexBreakdown, getInverterReplacementCost } from "./opex";
+import { NET_METERING_RATIO, PROJECT_LIFETIME } from "./constants";
+import { calculateOpexBreakdown } from "./opex";
 import { getAnnualProduction } from "./production";
 import type { AnnualCashFlowRow, OpexBreakdown, SimulationInput } from "./types";
 
@@ -8,8 +8,12 @@ const ZERO_OPEX_BREAKDOWN: OpexBreakdown = {
   insurance: 0,
   repairs: 0,
   monitoring: 0,
+  inverterReserve: 0,
   total: 0,
 };
+
+/** Konwersja MWh -> kWh */
+const MWH_TO_KWH = 1000;
 
 /**
  * Generuje tabele przeplywow pienieznych rok po roku na caly okres zycia projektu.
@@ -49,15 +53,18 @@ export function buildCashFlowTable(
     energyExported: 0,
     savings: 0,
     exportRevenue: 0,
+    prosumerSurcharge: 0,
+    residualImport: 0,
     opex: 0,
     opexBreakdown: ZERO_OPEX_BREAKDOWN,
-    inverterReplacement: 0,
     loanPayment: 0,
     netCashFlow: -ownContribution,
     cumulativeCashFlow: -ownContribution,
     gridPrice: input.cenaEnergii,
-    exportPrice: input.cenaSprzedazy,
+    exportPrice: NET_METERING_RATIO * input.cenaEnergiiImport,
   });
+
+  const annualDemandKwh = input.annualDemand * MWH_TO_KWH;
 
   for (let year = 1; year <= lifetime; year++) {
     const prevCumulative = rows[year - 1].cumulativeCashFlow;
@@ -68,32 +75,50 @@ export function buildCashFlowTable(
       year - 1,
     );
 
-    const energySelfConsumed = energyGenerated * autoconsumptionRate;
+    // Self-consumption capped by actual demand (cannot consume more than you use)
+    const rawSelfConsumed = energyGenerated * autoconsumptionRate;
+    const energySelfConsumed = Math.min(rawSelfConsumed, annualDemandKwh);
     const energyExported = energyGenerated - energySelfConsumed;
 
     const gridPrice =
       input.cenaEnergii * (1 + input.inflacjaEnergii) ** (year - 1);
-    const exportPrice =
-      input.cenaSprzedazy * (1 + input.inflacjaEnergii) ** (year - 1);
+    const importPrice =
+      input.cenaEnergiiImport * (1 + input.inflacjaEnergii) ** (year - 1);
+    // Opust 1:0,6 (Ustawa o OZE art. 38c): za kazdy 1 kWh eksportu
+    // mozna odebrac NET_METERING_RATIO kWh bezplatnie po cenie importowej
+    const exportPrice = NET_METERING_RATIO * importPrice;
 
+    // Net-metering kombinowany z surcharge prosumenckim:
+    // - PV pokrywa zuzycie do energySelfConsumed (oszczedza po cenie bazowej)
+    // - Opust pokrywa do opustCreditUsed kWh (oszczedza po cenie bazowej)
+    // - Reszta zapotrzebowania kupowana po cenie prosumenckiej (z narzutem)
+    const opustCreditAvailable = NET_METERING_RATIO * energyExported;
+    const residualAfterSelf = Math.max(
+      0,
+      annualDemandKwh - energySelfConsumed,
+    );
+    const opustCreditUsed = Math.min(opustCreditAvailable, residualAfterSelf);
+    const residualImport = residualAfterSelf - opustCreditUsed;
+
+    // Oszczednosc = unikniety koszt zakupu energii po cenie bazowej (bez PV)
     const savings = energySelfConsumed * gridPrice;
-    const exportRevenue = energyExported * exportPrice;
+    // Opust przelicza na unikniety koszt po cenie bazowej (energia z sieci za darmo)
+    const exportRevenue = opustCreditUsed * gridPrice;
+    // Narzut prosumencki — kara nakladana na rezydualny import
+    const prosumerSurcharge = residualImport * (importPrice - gridPrice);
+
     const opexBreakdown = calculateOpexBreakdown(
       initialCapex,
       input.pvPower,
       year - 1,
-    );
-    const inverterReplacement = getInverterReplacementCost(
-      input.pvPower,
-      year,
     );
     const loanPayment = year <= loanTerm ? loanAnnualPayment : 0;
 
     const netCashFlow =
       savings +
       exportRevenue -
+      prosumerSurcharge -
       opexBreakdown.total -
-      inverterReplacement -
       loanPayment;
     const cumulativeCashFlow = prevCumulative + netCashFlow;
 
@@ -104,9 +129,10 @@ export function buildCashFlowTable(
       energyExported,
       savings,
       exportRevenue,
+      prosumerSurcharge,
+      residualImport,
       opex: opexBreakdown.total,
       opexBreakdown,
-      inverterReplacement,
       loanPayment,
       netCashFlow,
       cumulativeCashFlow,

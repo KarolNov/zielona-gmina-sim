@@ -1,9 +1,10 @@
-export type ResultTab = "kpi" | "charts" | "tables";
+export type ResultTab = "kpi" | "charts" | "tables" | "sensitivity";
 
 const TABS: { key: ResultTab; label: string }[] = [
 	{ key: "kpi", label: "Wskaźniki" },
 	{ key: "charts", label: "Wykresy" },
 	{ key: "tables", label: "Tabele" },
+	{ key: "sensitivity", label: "Wrażliwość" },
 ];
 
 interface TabBarProps {

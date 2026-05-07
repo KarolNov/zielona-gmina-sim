@@ -1,15 +1,16 @@
 import { CommuneType } from "#/lib/types";
 
 export const searchDefaults = {
-	communeSize: CommuneType.SMALL,
+	communeSize: CommuneType.MEDIUM,
 	donation: 0,
-	pvPower: 10,
+	pvPower: 300,
 	storageEnabled: false,
 	storagePct: 50,
 	degradacja: 0.5,
 	katNachylenia: 35,
-	cenaEnergii: 1.2,
-	cenaSprzedazy: 0.4,
+	cenaEnergii: 0.8,
+	cenaEnergiiImport: 0.92,
+	annualDemand: 1000,
 	inflacjaEnergii: 3,
 	loanEnabled: false,
 	loanRate: 7,
@@ -28,7 +29,8 @@ export type SearchParams = {
 	degradacja: number;
 	katNachylenia: number;
 	cenaEnergii: number;
-	cenaSprzedazy: number;
+	cenaEnergiiImport: number;
+	annualDemand: number;
 	inflacjaEnergii: number;
 	loanEnabled: boolean;
 	loanRate: number;

@@ -1,5 +1,5 @@
 import { DISCOUNT_RATE, PROJECT_LIFETIME } from "./constants";
-import { calculateOpexBreakdown, getInverterReplacementCost } from "./opex";
+import { calculateOpexBreakdown } from "./opex";
 import { getAnnualProduction } from "./production";
 
 /**
@@ -7,12 +7,12 @@ import { getAnnualProduction } from "./production";
  *
  * Formula:
  * ```
- * LCOE = sum(t=0..n)[(CAPEX_t + OPEX_t + Inwerter_t) / (1+r)^t]
+ * LCOE = sum(t=0..n)[(CAPEX_t + OPEX_t) / (1+r)^t]
  *        ÷ sum(t=0..n)[E_gen_t / (1+r)^t]
  * ```
  *
- * - Licznik: CAPEX (rok 0, po dotacji) + zdyskontowane koszty OPEX (rok 1..n)
- *   + zdyskontowany koszt wymiany inwertera (rok 12)
+ * - Licznik: CAPEX (rok 0, po dotacji) + zdyskontowane koszty OPEX (rok 1..n).
+ *   OPEX zawiera roczna rezerwe na wymiane inwertera (sinking fund).
  * - Mianownik: zdyskontowana calkowita produkcja energii (rok 1..n)
  *
  * @param capexAfterSubsidy - CAPEX netto po dotacji (PLN)
@@ -39,10 +39,9 @@ export function calculateLCOE(
   for (let t = 1; t <= lifetime; t++) {
     const discountFactor = Math.pow(1 + discountRate, t);
     const opex = calculateOpexBreakdown(initialCapex, pvPowerKwp, t - 1);
-    const inverter = getInverterReplacementCost(pvPowerKwp, t);
     const energy = getAnnualProduction(annualYield, degradacja, t - 1);
 
-    costSum += (opex.total + inverter) / discountFactor;
+    costSum += opex.total / discountFactor;
     energySum += energy / discountFactor;
   }
 

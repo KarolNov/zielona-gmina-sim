@@ -21,8 +21,9 @@ uwzględniają dotacje, koszty obsługi kredytu oraz inflację cen energii.
 | | Pojemność magazynu energii | kWh | dane użytkownika |
 | **Energetyczne** | Roczny uzysk energetyczny | kWh | baza PVGIS (JRC) |
 | | Rozkład uzysku miesięcznego | kWh × 12 | baza PVGIS (JRC) |
-| **Finansowe** | Cena zakupu energii z sieci | PLN/kWh | dane użytkownika (domyślnie 0,85) |
-| | Cena sprzedaży nadwyżek do sieci | PLN/kWh | dane użytkownika (domyślnie 0,40) |
+| | Roczne zapotrzebowanie gminy | MWh / rok | dane użytkownika (domyślnie 1 000) |
+| **Finansowe** | Cena bazowa energii (taryfa odbiorcy) | PLN/kWh | dane użytkownika (domyślnie 0,80) |
+| | Cena importu prosumenckiego | PLN/kWh | dane użytkownika (domyślnie 0,92, ok. +15% nad bazową) |
 | | Roczna inflacja ceny energii | % / rok | dane użytkownika (domyślnie 3%) |
 | | Dofinansowanie (dotacja) | % CAPEX | dane użytkownika |
 | **Finansowanie kredytowe** | Włączenie finansowania kredytowego | tak / nie | dane użytkownika |
@@ -53,11 +54,29 @@ miesięcznych mnożony przez $(1 - d)^t$.
 
 ### 2.2 Podział: autokonsumpcja vs. eksport
 
-$$E_{auto}(t) = E_{gen}(t) \cdot \alpha$$
+Autokonsumpcja jest ograniczona przez rzeczywiste zapotrzebowanie gminy
+(nie da się zużyć więcej energii niż się jej potrzebuje):
 
-$$E_{exp}(t) = E_{gen}(t) \cdot (1 - \alpha)$$
+$$E_{auto}(t) = \min\!\left(E_{gen}(t) \cdot \alpha,\; D\right)$$
 
-Gdzie $\alpha$ to współczynnik autokonsumpcji (patrz sekcja 3).
+$$E_{exp}(t) = E_{gen}(t) - E_{auto}(t)$$
+
+| Symbol | Znaczenie |
+|--------|-----------|
+| $\alpha$ | Współczynnik autokonsumpcji (patrz sekcja 3) |
+| $D$ | Roczne zapotrzebowanie gminy (kWh/rok) |
+
+### 2.3 Bilans importu rezydualnego
+
+Po pokryciu zużycia z PV pozostaje rezydualne zapotrzebowanie, które
+można częściowo skompensować opustem (sekcja 7.2). To, co nie zostanie
+pokryte, kupowane jest po cenie prosumenckiej (z narzutem):
+
+$$E_{res}(t) = D - E_{auto}(t) - E_{opust}(t)$$
+
+Energia $E_{res}$ obciąża właściciela narzutem prosumenckim
+(sekcja 7.3) — to kluczowy mechanizm różnicujący opłacalność przy
+różnych poziomach autokonsumpcji.
 
 ---
 
@@ -115,9 +134,9 @@ $$CAPEX_{netto} = CAPEX_{brutto} \cdot \left(1 - \frac{dotacja\%}{100}\right)$$
 ## 5. Koszty operacyjne (OPEX)
 
 Koszty eksploatacyjne składają się z czterech kategorii kosztów
-powtarzalnych oraz jednorazowej wymiany inwertera.
+powtarzalnych oraz rocznej rezerwy na wymianę inwertera.
 
-### 5.1 Koszty powtarzalne (roczne)
+### 5.1 Koszty powtarzalne (roczne, z eskalacją)
 
 | Kategoria | Baza | Wartość | Typ |
 |-----------|------|---------|-----|
@@ -126,22 +145,29 @@ powtarzalnych oraz jednorazowej wymiany inwertera.
 | Naprawy | % CAPEX brutto | 0,2% | rezerwa na naprawy komponentów |
 | Monitoring | PLN/rok | 600 | stały (platforma monitoringu) |
 
-Każdy składnik podlega rocznej eskalacji 2% (inflacja kosztów usług
-i materiałów):
+Każdy z powyższych składników podlega rocznej eskalacji 2% (inflacja
+kosztów usług i materiałów):
 
 $$OPEX_i(t) = OPEX_i^{bazowy} \cdot (1{,}02)^{t}$$
 
-$$OPEX(t) = \sum_i OPEX_i(t)$$
+### 5.2 Rezerwa na wymianę inwertera (sinking fund)
 
-### 5.2 Wymiana inwertera (jednorazowa)
+Inwerter wymaga wymiany po ok. 10–15 latach eksploatacji. Zamiast
+modelować jednorazowy wydatek w pojedynczym roku (co generuje sztuczny
+„krater" w przepływach pieniężnych i nieliniowości w krzywej PBP),
+koszt wymiany jest amortyzowany jako stała roczna rezerwa odkładana
+przez cały okres życia projektu:
 
-Inwerter wymaga wymiany po ok. 10–15 latach eksploatacji. Model
-uwzględnia jednorazowy koszt wymiany w roku 12:
+$$OPEX_{inv}(t) = \frac{P_{kWp} \cdot 500 \text{ PLN/kWp}}{n_{życia}}$$
 
-$$K_{inwerter} = P_{kWp} \cdot 500 \text{ PLN/kWp}$$
+Gdzie $n_{życia} = 25$ lat. Rezerwa nie podlega eskalacji (kwota
+nominalna odkładana co roku do funduszu rezerwowego). Odpowiada
+to praktyce księgowej spółdzielni budującej fundusz odnowieniowy
+zamiast obciążania budżetu w jednym roku.
 
-Koszt ten jest uwzględniony w przepływach pieniężnych roku 12
-oraz w liczniku LCOE.
+### 5.3 Sumaryczny OPEX
+
+$$OPEX(t) = \sum_i OPEX_i(t) + OPEX_{inv}(t)$$
 
 ---
 
@@ -188,20 +214,64 @@ Tabela generowana na 25 lat. Konwencja:
   CAPEX netto po dotacji. Brak produkcji energii.
 - **Rok 1..25** — eksploatacja
 
+### 7.1 Dwie ceny energii — cena bazowa vs. cena prosumencka
+
+Model rozróżnia dwie ceny energii elektrycznej:
+
+| Symbol | Cena | Znaczenie |
+|--------|------|-----------|
+| $c_{base}$ | bazowa | Cena energii czynnej bez narzutów dla odbiorcy końcowego (bez PV) |
+| $c_{imp}$ | prosumencka | Cena importu dla prosumenta — z narzutem dystrybutora (zwykle +10–20%) |
+
+Sprzedawcy energii często podnoszą cenę zakupu energii dla odbiorców
+posiadających własne źródło (taryfy prosumenckie, opłata jakościowa,
+narzut na opłatę handlową). W modelu odzwierciedla to różnica
+$c_{imp} - c_{base}$ — narzut prosumencki obciążający rezydualny
+import z sieci (sekcja 7.3).
+
+Obie ceny rosną z tą samą roczną stopą inflacji $i$:
+
+$$c_{base}(t) = c_{base} \cdot (1 + i)^{t-1}$$
+
+$$c_{imp}(t) = c_{imp} \cdot (1 + i)^{t-1}$$
+
+### 7.2 Opust 1:0,6 (depozyt prosumencki)
+
+Zgodnie z art. 38c Ustawy o OZE (Dz.U. 2015 poz. 478 z późn. zm.),
+za każde 1 kWh wprowadzone przez spółdzielnię do sieci jej członkowie
+mogą odebrać $\eta = 0,6$ kWh bez opłat za energię i zmiennych
+opłat dystrybucyjnych:
+
+$$E_{opust\_dost}(t) = \eta \cdot E_{exp}(t)$$
+
+Opust pokrywa rezydualne zapotrzebowanie do wysokości faktycznego
+zużycia (nie da się odebrać więcej niż się potrzebuje):
+
+$$E_{opust}(t) = \min\!\left(E_{opust\_dost}(t),\; D - E_{auto}(t)\right)$$
+
+### 7.3 Pozycje przepływu pieniężnego
+
 Dla każdego roku eksploatacji $t$ (gdzie $t \geq 1$):
 
 | Pozycja | Formuła |
 |---------|---------|
 | Produkcja | $E_{gen}(t-1)$ (rok 1 = 0 lat degradacji) |
-| Cena zakupu z sieci | $c_{grid} \cdot (1 + i)^{t-1}$ |
-| Cena sprzedaży | $c_{sell} \cdot (1 + i)^{t-1}$ |
-| Oszczędności | $E_{auto} \cdot c_{grid}(t)$ |
-| Przychód z eksportu | $E_{exp} \cdot c_{sell}(t)$ |
-| OPEX | $OPEX(t-1)$ (suma 4 składników z eskalacją) |
-| Wymiana inwertera | $K_{inwerter}$ w roku 12, $0$ w pozostałych |
+| Autokonsumpcja | $E_{auto}(t)$, capped przez zapotrzebowanie $D$ |
+| Eksport | $E_{exp}(t) = E_{gen}(t) - E_{auto}(t)$ |
+| Oszczędności | $E_{auto}(t) \cdot c_{base}(t)$ |
+| Przychód z opustu | $E_{opust}(t) \cdot c_{base}(t)$ |
+| Narzut prosumencki | $E_{res}(t) \cdot \bigl(c_{imp}(t) - c_{base}(t)\bigr)$ |
+| OPEX | $OPEX(t-1)$ (suma składników z eskalacją + rezerwa inwertera) |
 | Rata kredytu | $R$ dla $t \leq n_{kredyt}$, $0$ dla $t > n_{kredyt}$ |
-| **Przepływ netto** | Oszczędności + Przychód z eksportu − OPEX − Inwerter − Rata kredytu |
+| **Przepływ netto** | Oszczędności + Przychód z opustu − Narzut prosumencki − OPEX − Rata kredytu |
 | **Skumulowany przepływ** | $\sum_{k=0}^{t} CF_k$ |
+
+Kluczowa intuicja: oszczędności i opust są wyceniane po cenie **bazowej**
+(unikamy zakupu po cenie taryfowej dla odbiorcy bez PV). Narzut prosumencki
+obciąża wyłącznie rezydualny import z sieci — czyli tę część zużycia,
+której nie pokryły ani PV, ani opust. Wyższa autokonsumpcja zmniejsza
+$E_{res}$, a więc zmniejsza karę narzutu — to mechanizm dający
+naturalne diminishing returns na krzywych PBP/NPV.
 
 ---
 
@@ -209,25 +279,23 @@ Dla każdego roku eksploatacji $t$ (gdzie $t \geq 1$):
 
 ### 8.1 LCOE — Znormalizowany Koszt Energii
 
-$$LCOE = \frac{\displaystyle CAPEX_{netto} + \sum_{t=1}^{n} \frac{OPEX(t) + K_{inwerter}(t)}{(1+r)^t}}{\displaystyle \sum_{t=1}^{n} \frac{E_{gen}(t)}{(1+r)^t}}$$
+$$LCOE = \frac{\displaystyle CAPEX_{netto} + \sum_{t=1}^{n} \frac{OPEX(t)}{(1+r)^t}}{\displaystyle \sum_{t=1}^{n} \frac{E_{gen}(t)}{(1+r)^t}}$$
 
-Gdzie $K_{inwerter}(t)$ wynosi $P_{kWp} \cdot 500$ w roku wymiany (12)
-i zero w pozostałych latach.
+Gdzie $OPEX(t)$ zawiera roczną rezerwę na wymianę inwertera (sekcja 5.2),
+więc cały koszt wymiany jest naturalnie uwzględniony w liczniku.
 
 Wynik wyrażony w PLN/kWh. Wartość powinna być istotnie niższa niż cena
 zakupu energii z sieci, co potwierdza konkurencyjność kosztową instalacji.
 
 **Wariant z finansowaniem kredytowym.** Gdy kredyt jest aktywny, w liczniku
-uwzględnia się wkład własny oraz zdyskontowane koszty operacyjne, wymianę
-inwertera i raty:
+uwzględnia się wkład własny oraz zdyskontowane koszty operacyjne i raty:
 
-$$LCOE_{kredyt} = \frac{\displaystyle W_0 + \sum_{t=1}^{n} \frac{OPEX(t) + K_{inwerter}(t) + R(t)}{(1+r)^t}}{\displaystyle \sum_{t=1}^{n} \frac{E_{gen}(t)}{(1+r)^t}}$$
+$$LCOE_{kredyt} = \frac{\displaystyle W_0 + \sum_{t=1}^{n} \frac{OPEX(t) + R(t)}{(1+r)^t}}{\displaystyle \sum_{t=1}^{n} \frac{E_{gen}(t)}{(1+r)^t}}$$
 
 | Symbol | Znaczenie |
 |--------|-----------|
 | $W_0$ | Wkład własny właściciela (CAPEX netto minus kwota kredytu) |
 | $R(t)$ | Rata kredytu w roku $t$ (zero po upływie okresu kredytowania) |
-| $K_{inwerter}(t)$ | Koszt wymiany inwertera w roku $t$ (niezerowy tylko w roku 12) |
 
 ### 8.2 PBP — Prosty okres zwrotu
 
@@ -269,15 +337,15 @@ Wartości domyślne oparte o polski rynek energetyki odnawialnej (2025/2026):
 |----------|---------|------|
 | Horyzont inwestycji | 25 | Okres życia projektu (lata) |
 | Stopa dyskontowa | 0,06 | WACC przyjęty do dyskontowania przepływów |
-| Progi kosztowe CAPEX | 4 000 / 3 500 / 3 200 / 2 800 | PLN/kWp wg skali instalacji |
+| Progi kosztowe CAPEX | 4 000 / 3 500 / 3 200 / 2 800 | PLN/kWp wg skali instalacji (>100 kWp = 2 800) |
 | Koszt magazynu energii | 2 000 | PLN/kWh pojemności |
 | Serwisowanie / czyszczenie | 40 PLN/kWp/rok | Przeglądy i czyszczenie paneli |
 | Ubezpieczenie | 0,004 | 0,4% CAPEX brutto rocznie |
 | Naprawy | 0,002 | 0,2% CAPEX brutto rocznie |
 | Monitoring | 600 PLN/rok | Stała kwota — platforma monitoringu |
 | Eskalacja kosztów utrzymania | 0,02 | Roczny wzrost kosztów operacyjnych |
-| Wymiana inwertera | 500 PLN/kWp | Jednorazowa wymiana w roku 12 |
-| Rok wymiany inwertera | 12 | Typowa żywotność inwertera |
+| Koszt wymiany inwertera | 500 PLN/kWp | Wymiana po ok. 12 latach (amortyzowana sinking fund) |
+| Współczynnik opustu | 0,6 | $\eta$ z art. 38c Ustawy o OZE — depozyt prosumencki 1:0,6 |
 | Bazowa autokonsumpcja | 0,30 / 0,40 / 0,50 | Współczynnik wg rozmiaru gminy (mała/średnia/duża) |
 | Przyrost autokonsumpcji z magazynu | 0,20 | pp na każdy kWh/kWp pojemności względnej |
 | Górny limit autokonsumpcji | 0,90 | Maksymalny osiągalny współczynnik |
@@ -294,9 +362,11 @@ Symulacja realizowana jest w następujących krokach:
    z uwzględnieniem dotacji
 3. Obliczenie parametrów kredytu (kwota, rata annuitetowa) — jeśli
    finansowanie kredytowe jest aktywne
-4. Budowa harmonogramu przepływów pieniężnych na 25 lat z uwzględnieniem
-   inflacji cen energii, degradacji paneli, kosztów utrzymania (4 składniki
-   z eskalacją), jednorazowej wymiany inwertera (rok 12) i rat kredytu
+4. Budowa harmonogramu przepływów pieniężnych na 25 lat z uwzględnieniem:
+   inflacji cen energii (cena bazowa + cena prosumencka), degradacji paneli,
+   capowania autokonsumpcji przez zapotrzebowanie gminy, opustu 1:0,6,
+   narzutu prosumenckiego na rezydualnym imporcie, kosztów utrzymania
+   z eskalacją, rocznej rezerwy na wymianę inwertera oraz rat kredytu
 5. Obliczenie wskaźników efektywności ekonomicznej: LCOE, NPV, IRR, PBP
 6. Wygenerowanie rozkładu produkcji miesięcznej dla pierwszego roku
    eksploatacji
@@ -309,13 +379,23 @@ ocenę opłacalności inwestycji.
 
 ## 11. Ograniczenia i uproszczenia
 
-- **Brak symulacji godzinowej** — autokonsumpcja modelowana współczynnikiem
-  procentowym zamiast porównania profili produkcji i zużycia godzina po godzinie.
-- **Inflacja symetryczna** — ta sama stopa inflacji stosowana do ceny zakupu
-  i sprzedaży energii.
-- **Stały współczynnik autokonsumpcji** — nie zmienia się w ciągu życia projektu
-  (w rzeczywistości profil zużycia gminy może ewoluować).
+- **Brak symulacji godzinowej** — autokonsumpcja i wykorzystanie opustu
+  modelowane są agregatami rocznymi zamiast porównania profili produkcji
+  i zużycia godzina po godzinie.
+- **Stały narzut prosumencki** — różnica $c_{imp} - c_{base}$ rośnie
+  proporcjonalnie do inflacji, nie modelujemy zmian regulacyjnych
+  (np. wprowadzenia/zniesienia narzutu na taryfie prosumenckiej).
+- **Symetryczna inflacja cen** — ta sama stopa $i$ stosowana zarówno
+  do ceny bazowej jak i prosumenckiej.
+- **Stałe roczne zapotrzebowanie** — $D$ nie zmienia się w czasie
+  (w rzeczywistości może rosnąć z elektryfikacją lub spadać dzięki
+  efektywności energetycznej).
+- **Stały współczynnik autokonsumpcji** — nie zmienia się w ciągu życia
+  projektu (w rzeczywistości profil zużycia gminy może ewoluować).
 - **CAPEX jednorazowy** — cały nakład w roku 0, brak etapowania inwestycji.
 - **Uproszczony model kredytu** — annuitet o stałej stopie procentowej,
   bez uwzględnienia zmiennego oprocentowania, prowizji bankowych,
   kosztów zabezpieczeń ani opłat dodatkowych.
+- **Sinking fund nominalny** — roczna rezerwa na wymianę inwertera nie
+  uwzględnia inflacji ceny inwerterów ani odsetek z odłożonych środków
+  (wartości netują się przy typowych założeniach makroekonomicznych).

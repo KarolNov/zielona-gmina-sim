@@ -6,10 +6,12 @@ export interface SimulationInput {
   pvPower: number;
   /** Roczna degradacja paneli jako ulamek dziesietny (np. 0.005 = 0.5%) */
   degradacja: number;
-  /** Cena zakupu energii z sieci w PLN/kWh */
+  /** Cena zakupu energii z sieci w PLN/kWh (referencyjna, bez PV) */
   cenaEnergii: number;
-  /** Cena sprzedazy nadwyzek w PLN/kWh */
-  cenaSprzedazy: number;
+  /** Cena importu energii dla prosumenta w PLN/kWh (z narzutami dystrybutora) */
+  cenaEnergiiImport: number;
+  /** Roczne zapotrzebowanie gminy na energie elektryczna (MWh/rok) */
+  annualDemand: number;
   /** Roczna inflacja ceny energii jako ulamek dziesietny (np. 0.03 = 3%) */
   inflacjaEnergii: number;
   /** Dofinansowanie jako procent CAPEX (0-100) */
@@ -56,6 +58,8 @@ export interface OpexBreakdown {
   repairs: number;
   /** Monitoring i zuzycie wlasne (PLN) */
   monitoring: number;
+  /** Roczna rezerwa na wymiane inwertera (sinking fund, PLN) */
+  inverterReserve: number;
   /** Suma rocznych kosztow operacyjnych (PLN) */
   total: number;
 }
@@ -66,13 +70,20 @@ export interface AnnualCashFlowRow {
   energyGenerated: number;
   energySelfConsumed: number;
   energyExported: number;
+  /** Unikniety koszt energii zuzytej z PV po cenie bazowej (PLN) */
   savings: number;
+  /** Wartosc opustu (energia odebrana z sieci za darmo) po cenie bazowej (PLN) */
   exportRevenue: number;
+  /**
+   * Narzut prosumencki na rezydualnym imporcie z sieci (PLN, dodatnia liczba = koszt).
+   * (annualDemand - selfConsumed - opustCreditUsed) × (importPrice - gridPrice)
+   */
+  prosumerSurcharge: number;
+  /** Energia rezydualnie importowana z sieci po wykorzystaniu opustu (kWh) */
+  residualImport: number;
   opex: number;
-  /** Rozbicie OPEX na skladniki */
+  /** Rozbicie OPEX na skladniki (wlacznie z roczna rezerwa inwertera) */
   opexBreakdown: OpexBreakdown;
-  /** Koszt wymiany inwertera w danym roku (PLN), 0 poza rokiem wymiany */
-  inverterReplacement: number;
   /** Rata kredytu w danym roku (PLN), 0 jesli brak kredytu lub po splacie */
   loanPayment: number;
   netCashFlow: number;
