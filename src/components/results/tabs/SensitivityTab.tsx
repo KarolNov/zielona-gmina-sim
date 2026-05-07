@@ -327,13 +327,13 @@ export function SensitivityTab({ input, modelRate }: SensitivityTabProps) {
 					magazynu energii.
 				</p>
 				<p className="text-xs text-(--sea-ink-soft)">
-					Model kosztu osiągnięcia AC: do ~50% — sam harmonogram obciążeń
-					(pompownie, oświetlenie). Powyżej — automatycznie dobierany
-					magazyn energii o pojemności rosnącej logarytmicznie z target AC
-					(<code>storage = SCALE × −ln(1 − Δ/(0,95 − 0,5)) × kWp</code>).
-					Każdy kolejny pp AC kosztuje więcej niż poprzedni — krzywa
-					nasyca się w okolicy 85–90%, gdzie marginalny koszt magazynu
-					przewyższa marginalny przychód z autokonsumpcji.
+					Diminishing returns wynika bezpośrednio z modelu cash flow:
+					oszczędności i opust wyceniane są po cenie bazowej, a rezydualny
+					import obciążony narzutem prosumenckim ({" "}
+					<code>importPrice − gridPrice</code>). CAPEX i magazyn energii
+					pozostają takie jak w parametrach symulacji — krzywa pokazuje,
+					jak sam wskaźnik AC wpływa na opłacalność, niezależnie od
+					sposobu jego osiągnięcia.
 				</p>
 			</div>
 

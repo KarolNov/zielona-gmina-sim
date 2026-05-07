@@ -74,31 +74,6 @@ export const STORAGE_AUTOCONSUMPTION_BOOST_PER_KWH_PER_KWP = 0.20;
 export const MAX_AUTOCONSUMPTION = 0.9;
 
 /**
- * Poziom autokonsumpcji osiagalny bez magazynu energii — wylacznie
- * przez harmonogramowanie obciazen (pompownie, oswietlenie, klimatyzacja).
- */
-export const AC_NO_STORAGE_BASELINE = 0.5;
-
-/**
- * Asymptota AC w modelu wymaganego magazynu (musi byc > MAX_AUTOCONSUMPTION).
- * Im blizej target_AC do tej wartosci, tym szybciej rosnie wymagany magazyn.
- */
-export const AC_STORAGE_ASYMPTOTE = 0.95;
-
-/**
- * Skala wymagania magazynu (kWh/kWp) w funkcji logarytmicznej:
- *   storage_per_kwp = SCALE × (−ln(1 − (target − baseline)/(asymptote − baseline)))
- *
- * Wzrost AC o kazdy punkt procentowy zwieksza koszt nieliniowo:
- * pierwsze pp powyzej baseline sa tanie, kolejne wymagaja coraz wiekszego
- * magazynu, az do nasycenia w okolicy AC_STORAGE_ASYMPTOTE.
- *
- * Wieksze wartosci -> ostrzejszy wzrost kosztu, mocniejsze wyplaszczenie
- * krzywej PBP/NPV przy wysokim AC.
- */
-export const STORAGE_REQUIREMENT_SCALE_KWH_PER_KWP = 0.3;
-
-/**
  * Wspolczynnik opustu dla spoldzielni energetycznej (stosunek 1:0,6).
  *
  * Wynika z art. 38c Ustawy o OZE (Dz.U. 2015 poz. 478 z pozn. zm.):
