@@ -13,7 +13,7 @@ export const DISCOUNT_RATE = 0.06;
 export const CAPEX_TIERS = [
   { maxKwp: 10, costPerKwp: 4000 },
   { maxKwp: 50, costPerKwp: 3500 },
-  { maxKwp: 200, costPerKwp: 3200 },
+  { maxKwp: 100, costPerKwp: 3200 },
   { maxKwp: Infinity, costPerKwp: 2800 },
 ] as const;
 
