@@ -51,6 +51,7 @@ export const Route = createFileRoute("/")({
 		katNachylenia: num(raw.katNachylenia, searchDefaults.katNachylenia),
 		cenaEnergii: num(raw.cenaEnergii, searchDefaults.cenaEnergii),
 		cenaEnergiiImport: num(raw.cenaEnergiiImport, searchDefaults.cenaEnergiiImport),
+		annualDemand: num(raw.annualDemand, searchDefaults.annualDemand),
 		inflacjaEnergii: num(raw.inflacjaEnergii, searchDefaults.inflacjaEnergii),
 		loanEnabled: raw.loanEnabled === true || raw.loanEnabled === "true",
 		loanRate: num(raw.loanRate, searchDefaults.loanRate),
@@ -88,6 +89,7 @@ function App() {
 		katNachylenia,
 		cenaEnergii,
 		cenaEnergiiImport,
+		annualDemand,
 		inflacjaEnergii,
 		loanEnabled,
 		loanRate,
@@ -155,6 +157,7 @@ function App() {
 				degradacja: degradacja / 100,
 				cenaEnergii,
 				cenaEnergiiImport,
+				annualDemand,
 				inflacjaEnergii: inflacjaEnergii / 100,
 				donation,
 				storageEnabled,
@@ -176,6 +179,7 @@ function App() {
 		degradacja,
 		cenaEnergii,
 		cenaEnergiiImport,
+		annualDemand,
 		inflacjaEnergii,
 		donation,
 		storageEnabled,
@@ -408,6 +412,18 @@ function App() {
 								(art. 38c Ustawy o OZE, Dz.U. 2015 poz. 478).
 							</p>
 						</div>
+						<NumberInput
+							label="Roczne zapotrzebowanie gminy (MWh/rok)"
+							value={annualDemand}
+							onChange={(v) => setParam("annualDemand", v)}
+							min={1}
+							max={100000}
+							step={10}
+							decimal={0}
+							warning={annualDemand < pvPower * 1 ? `Zapotrzebowanie ${annualDemand} MWh/rok jest niskie względem ${pvPower} kWp PV (~${Math.round(pvPower)} MWh/rok produkcji) — większość energii pójdzie na eksport` : null}
+							name="annualDemand"
+							id="annualDemand"
+						/>
 						<NumberInput
 							label="Inflacja ceny energii (%/rok)"
 							value={inflacjaEnergii}

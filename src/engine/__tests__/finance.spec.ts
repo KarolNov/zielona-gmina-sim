@@ -8,6 +8,7 @@ function baseInput(overrides: Partial<SimulationInput> = {}): SimulationInput {
     degradacja: 0.005,
     cenaEnergii: 1.2,
     cenaEnergiiImport: 1.4,
+    annualDemand: 12,
     inflacjaEnergii: 0.03,
     donation: 0,
     storageEnabled: false,

@@ -11,6 +11,9 @@ const ZERO_OPEX_BREAKDOWN: OpexBreakdown = {
   total: 0,
 };
 
+/** Konwersja MWh -> kWh */
+const MWH_TO_KWH = 1000;
+
 /**
  * Generuje tabele przeplywow pienieznych rok po roku na caly okres zycia projektu.
  *
@@ -49,6 +52,8 @@ export function buildCashFlowTable(
     energyExported: 0,
     savings: 0,
     exportRevenue: 0,
+    prosumerSurcharge: 0,
+    residualImport: 0,
     opex: 0,
     opexBreakdown: ZERO_OPEX_BREAKDOWN,
     inverterReplacement: 0,
@@ -59,6 +64,8 @@ export function buildCashFlowTable(
     exportPrice: NET_METERING_RATIO * input.cenaEnergiiImport,
   });
 
+  const annualDemandKwh = input.annualDemand * MWH_TO_KWH;
+
   for (let year = 1; year <= lifetime; year++) {
     const prevCumulative = rows[year - 1].cumulativeCashFlow;
 
@@ -68,7 +75,9 @@ export function buildCashFlowTable(
       year - 1,
     );
 
-    const energySelfConsumed = energyGenerated * autoconsumptionRate;
+    // Self-consumption capped by actual demand (cannot consume more than you use)
+    const rawSelfConsumed = energyGenerated * autoconsumptionRate;
+    const energySelfConsumed = Math.min(rawSelfConsumed, annualDemandKwh);
     const energyExported = energyGenerated - energySelfConsumed;
 
     const gridPrice =
@@ -79,9 +88,25 @@ export function buildCashFlowTable(
     // mozna odebrac NET_METERING_RATIO kWh bezplatnie po cenie importowej
     const exportPrice = NET_METERING_RATIO * importPrice;
 
-    // Self-consumed energy saves from buying at the higher prosumer import price
-    const savings = energySelfConsumed * importPrice;
-    const exportRevenue = energyExported * exportPrice;
+    // Net-metering kombinowany z surcharge prosumenckim:
+    // - PV pokrywa zuzycie do energySelfConsumed (oszczedza po cenie bazowej)
+    // - Opust pokrywa do opustCreditUsed kWh (oszczedza po cenie bazowej)
+    // - Reszta zapotrzebowania kupowana po cenie prosumenckiej (z narzutem)
+    const opustCreditAvailable = NET_METERING_RATIO * energyExported;
+    const residualAfterSelf = Math.max(
+      0,
+      annualDemandKwh - energySelfConsumed,
+    );
+    const opustCreditUsed = Math.min(opustCreditAvailable, residualAfterSelf);
+    const residualImport = residualAfterSelf - opustCreditUsed;
+
+    // Oszczednosc = unikniety koszt zakupu energii po cenie bazowej (bez PV)
+    const savings = energySelfConsumed * gridPrice;
+    // Opust przelicza na unikniety koszt po cenie bazowej (energia z sieci za darmo)
+    const exportRevenue = opustCreditUsed * gridPrice;
+    // Narzut prosumencki — kara nakladana na rezydualny import
+    const prosumerSurcharge = residualImport * (importPrice - gridPrice);
+
     const opexBreakdown = calculateOpexBreakdown(
       initialCapex,
       input.pvPower,
@@ -96,6 +121,7 @@ export function buildCashFlowTable(
     const netCashFlow =
       savings +
       exportRevenue -
+      prosumerSurcharge -
       opexBreakdown.total -
       inverterReplacement -
       loanPayment;
@@ -108,6 +134,8 @@ export function buildCashFlowTable(
       energyExported,
       savings,
       exportRevenue,
+      prosumerSurcharge,
+      residualImport,
       opex: opexBreakdown.total,
       opexBreakdown,
       inverterReplacement,

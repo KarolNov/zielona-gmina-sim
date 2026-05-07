@@ -10,6 +10,8 @@ export interface SimulationInput {
   cenaEnergii: number;
   /** Cena importu energii dla prosumenta w PLN/kWh (z narzutami dystrybutora) */
   cenaEnergiiImport: number;
+  /** Roczne zapotrzebowanie gminy na energie elektryczna (MWh/rok) */
+  annualDemand: number;
   /** Roczna inflacja ceny energii jako ulamek dziesietny (np. 0.03 = 3%) */
   inflacjaEnergii: number;
   /** Dofinansowanie jako procent CAPEX (0-100) */
@@ -66,8 +68,17 @@ export interface AnnualCashFlowRow {
   energyGenerated: number;
   energySelfConsumed: number;
   energyExported: number;
+  /** Unikniety koszt energii zuzytej z PV po cenie bazowej (PLN) */
   savings: number;
+  /** Wartosc opustu (energia odebrana z sieci za darmo) po cenie bazowej (PLN) */
   exportRevenue: number;
+  /**
+   * Narzut prosumencki na rezydualnym imporcie z sieci (PLN, dodatnia liczba = koszt).
+   * (annualDemand - selfConsumed - opustCreditUsed) × (importPrice - gridPrice)
+   */
+  prosumerSurcharge: number;
+  /** Energia rezydualnie importowana z sieci po wykorzystaniu opustu (kWh) */
+  residualImport: number;
   opex: number;
   /** Rozbicie OPEX na skladniki */
   opexBreakdown: OpexBreakdown;
