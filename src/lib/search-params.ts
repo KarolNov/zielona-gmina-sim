@@ -3,7 +3,7 @@ import { CommuneType } from "#/lib/types";
 export const searchDefaults = {
 	communeSize: CommuneType.MEDIUM,
 	donation: 0,
-	pvPower: 200,
+	pvPower: 250,
 	storageEnabled: false,
 	storagePct: 50,
 	degradacja: 0.5,

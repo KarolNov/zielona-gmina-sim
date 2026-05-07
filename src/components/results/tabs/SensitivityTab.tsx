@@ -314,8 +314,14 @@ export function SensitivityTab({ input, modelRate }: SensitivityTabProps) {
 		[input],
 	);
 
-	// Filter out points where PBP is Infinity for cleaner chart
-	const pbpData = points.filter((p) => p.paybackYears < 100);
+	// Cap PBP at PBP_DISPLAY_CAP for charting so points where the project
+	// never pays back (Infinity) still render — the line clips at the cap
+	// instead of dropping out of the chart entirely.
+	const PBP_DISPLAY_CAP = 30;
+	const pbpData = points.map((p) => ({
+		...p,
+		paybackYears: Math.min(p.paybackYears, PBP_DISPLAY_CAP),
+	}));
 
 	return (
 		<div className="space-y-6">
@@ -364,7 +370,9 @@ export function SensitivityTab({ input, modelRate }: SensitivityTabProps) {
 					dataKey="paybackYears"
 					modelRate={modelRate}
 					formatter={(v) =>
-						v === Infinity ? "> 25 lat" : `${v.toFixed(1)} lat`
+						v >= PBP_DISPLAY_CAP
+							? `> ${PBP_DISPLAY_CAP} lat`
+							: `${v.toFixed(1)} lat`
 					}
 					unit=""
 					yTickFormatter={(v) => `${v.toFixed(0)} lat`}
