@@ -1,5 +1,5 @@
 import { NET_METERING_RATIO, PROJECT_LIFETIME } from "./constants";
-import { calculateOpexBreakdown, getInverterReplacementCost } from "./opex";
+import { calculateOpexBreakdown } from "./opex";
 import { getAnnualProduction } from "./production";
 import type { AnnualCashFlowRow, OpexBreakdown, SimulationInput } from "./types";
 
@@ -8,6 +8,7 @@ const ZERO_OPEX_BREAKDOWN: OpexBreakdown = {
   insurance: 0,
   repairs: 0,
   monitoring: 0,
+  inverterReserve: 0,
   total: 0,
 };
 
@@ -56,7 +57,6 @@ export function buildCashFlowTable(
     residualImport: 0,
     opex: 0,
     opexBreakdown: ZERO_OPEX_BREAKDOWN,
-    inverterReplacement: 0,
     loanPayment: 0,
     netCashFlow: -ownContribution,
     cumulativeCashFlow: -ownContribution,
@@ -112,10 +112,6 @@ export function buildCashFlowTable(
       input.pvPower,
       year - 1,
     );
-    const inverterReplacement = getInverterReplacementCost(
-      input.pvPower,
-      year,
-    );
     const loanPayment = year <= loanTerm ? loanAnnualPayment : 0;
 
     const netCashFlow =
@@ -123,7 +119,6 @@ export function buildCashFlowTable(
       exportRevenue -
       prosumerSurcharge -
       opexBreakdown.total -
-      inverterReplacement -
       loanPayment;
     const cumulativeCashFlow = prevCumulative + netCashFlow;
 
@@ -138,7 +133,6 @@ export function buildCashFlowTable(
       residualImport,
       opex: opexBreakdown.total,
       opexBreakdown,
-      inverterReplacement,
       loanPayment,
       netCashFlow,
       cumulativeCashFlow,

@@ -21,7 +21,7 @@ import type {
 export { getMonthlyProduction, getAnnualProduction } from "./production";
 export { getAutoconsumptionRate } from "./autoconsumption";
 export { calculateCapex, applySubsidy } from "./capex";
-export { calculateOpexBreakdown, calculateOpex, getInverterReplacementCost } from "./opex";
+export { calculateOpexBreakdown, calculateOpex } from "./opex";
 export { calculateLCOE } from "./lcoe";
 export { calculateAnnualPayment } from "./loan";
 export { buildCashFlowTable, calculatePaybackPeriod } from "./cashflow";
@@ -126,8 +126,7 @@ export function runSimulation(input: SimulationInput): SimulationResult {
     for (const row of cashFlowTable) {
       if (row.year === 0) continue;
       const df = (1 + DISCOUNT_RATE) ** row.year;
-      discountedCosts +=
-        (row.opex + row.inverterReplacement + row.loanPayment) / df;
+      discountedCosts += (row.opex + row.loanPayment) / df;
       discountedEnergy += row.energyGenerated / df;
     }
     lcoe =

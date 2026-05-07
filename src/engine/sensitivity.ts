@@ -80,8 +80,7 @@ export function runSensitivityAnalysis(
       for (const row of cashFlowTable) {
         if (row.year === 0) continue;
         const df = (1 + DISCOUNT_RATE) ** row.year;
-        discountedCosts +=
-          (row.opex + row.inverterReplacement + row.loanPayment) / df;
+        discountedCosts += (row.opex + row.loanPayment) / df;
         discountedEnergy += row.energyGenerated / df;
       }
       lcoe =

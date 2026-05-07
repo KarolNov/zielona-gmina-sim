@@ -58,6 +58,8 @@ export interface OpexBreakdown {
   repairs: number;
   /** Monitoring i zuzycie wlasne (PLN) */
   monitoring: number;
+  /** Roczna rezerwa na wymiane inwertera (sinking fund, PLN) */
+  inverterReserve: number;
   /** Suma rocznych kosztow operacyjnych (PLN) */
   total: number;
 }
@@ -80,10 +82,8 @@ export interface AnnualCashFlowRow {
   /** Energia rezydualnie importowana z sieci po wykorzystaniu opustu (kWh) */
   residualImport: number;
   opex: number;
-  /** Rozbicie OPEX na skladniki */
+  /** Rozbicie OPEX na skladniki (wlacznie z roczna rezerwa inwertera) */
   opexBreakdown: OpexBreakdown;
-  /** Koszt wymiany inwertera w danym roku (PLN), 0 poza rokiem wymiany */
-  inverterReplacement: number;
   /** Rata kredytu w danym roku (PLN), 0 jesli brak kredytu lub po splacie */
   loanPayment: number;
   netCashFlow: number;

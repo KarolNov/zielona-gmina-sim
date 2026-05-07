@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { CommuneType } from '#/lib/types';
-import { runSimulation, type SimulationInput, INVERTER_REPLACEMENT_YEAR } from '../index';
+import { runSimulation, type SimulationInput, PROJECT_LIFETIME } from '../index';
 
 function baseInput(overrides: Partial<SimulationInput> = {}): SimulationInput {
   return {
@@ -106,40 +106,33 @@ describe('maintenance costs', () => {
     expect(b.insurance).toBeGreaterThan(0);
     expect(b.repairs).toBeGreaterThan(0);
     expect(b.monitoring).toBeGreaterThan(0);
+    expect(b.inverterReserve).toBeGreaterThan(0);
     expect(b.total).toBeCloseTo(
-      b.servicing + b.insurance + b.repairs + b.monitoring,
+      b.servicing + b.insurance + b.repairs + b.monitoring + b.inverterReserve,
     );
     expect(result.annualOpex).toBeCloseTo(b.total);
   });
 
-  test('inverter replacement appears only in year 12', () => {
-    const result = runSimulation(baseInput());
-
+  test('inverter cost is amortized as flat annual reserve in OPEX', () => {
+    const result = runSimulation(baseInput({ pvPower: 50 }));
+    // 50 kWp * 500 PLN/kWp / 25 yr = 1,000 PLN/yr
+    const expectedReserve = (50 * 500) / PROJECT_LIFETIME;
     for (const row of result.cashFlowTable) {
-      if (row.year === INVERTER_REPLACEMENT_YEAR) {
-        expect(row.inverterReplacement).toBeGreaterThan(0);
-      } else {
-        expect(row.inverterReplacement).toBe(0);
-      }
+      if (row.year === 0) continue;
+      expect(row.opexBreakdown.inverterReserve).toBeCloseTo(expectedReserve);
     }
   });
 
-  test('inverter replacement cost equals pvPower * cost per kWp', () => {
-    const result = runSimulation(baseInput({ pvPower: 50 }));
-    // 50 kWp * 500 PLN/kWp = 25,000 PLN
-    expect(result.inverterReplacementCost).toBe(25_000);
-    expect(result.cashFlowTable[INVERTER_REPLACEMENT_YEAR].inverterReplacement).toBe(25_000);
-  });
-
-  test('inverter replacement reduces net cash flow in year 12', () => {
+  test('cash flow has no year-12 spike (sinking-fund accounting)', () => {
     const result = runSimulation(baseInput());
-    const year11 = result.cashFlowTable[11];
-    const year12 = result.cashFlowTable[12];
-    const year13 = result.cashFlowTable[13];
-
-    // Year 12 net CF should be significantly lower than neighbors
-    expect(year12.netCashFlow).toBeLessThan(year11.netCashFlow);
-    expect(year12.netCashFlow).toBeLessThan(year13.netCashFlow);
+    // Net CF in years 11/12/13 should be smooth (no inverter crater)
+    const y11 = result.cashFlowTable[11].netCashFlow;
+    const y12 = result.cashFlowTable[12].netCashFlow;
+    const y13 = result.cashFlowTable[13].netCashFlow;
+    // Differences come only from inflation/degradation/escalation,
+    // not a one-shot inverter cost (which would dwarf those second-order effects).
+    expect(Math.abs(y12 - y11)).toBeLessThan(Math.abs(y11) * 0.1);
+    expect(Math.abs(y13 - y12)).toBeLessThan(Math.abs(y12) * 0.1);
   });
 
   test('OPEX scales with system size', () => {
