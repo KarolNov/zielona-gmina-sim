@@ -16,7 +16,8 @@
     "format": "biome format",
     "lint": "biome lint",
     "check": "biome check",
-    "deploy": "npm run build && wrangler deploy"
+    "deploy": "npm run build && wrangler deploy",
+    "charts": "tsx scripts/generate-charts.ts"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.26.0",
@@ -35,6 +36,8 @@
     "@tanstack/store": "latest",
     "@types/leaflet": "^1.9.21",
     "@types/leaflet-geosearch": "^2.7.1",
+    "chart.js": "^4.5.1",
+    "chartjs-node-canvas": "^5.0.0",
     "leaflet": "^1.9.4",
     "leaflet-geosearch": "^4.2.2",
     "lucide-react": "^0.545.0",
