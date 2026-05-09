@@ -73,6 +73,8 @@ export function runSimulation(input: SimulationInput): SimulationResult {
     input.communeSize,
     input.storageCapacity,
     input.pvPower,
+    input.annualDemand,
+    input.annualYield,
   );
 
   // 2. CAPEX
