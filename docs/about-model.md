@@ -96,7 +96,11 @@ wodociągowe):
 Magazyn energii podnosi autokonsumpcję poprzez przesunięcie zużycia na
 godziny wieczorne i nocne (peak shaving, arbitraż czasowy):
 
-$$\alpha = \min\!\left(\alpha_0 + \frac{S_{kWh}}{P_{kWp}} \cdot 0{,}20,\; 0{,}90\right)$$
+$$\alpha_{raw} = \alpha_0 + \frac{S_{kWh}}{P_{kWp}} \cdot 0{,}20$$
+
+Współczynnik jest następnie ograniczony dwoma capami:
+
+$$\alpha = \min\!\left(\alpha_{raw},\; 0{,}90,\; \frac{D}{E_{gen,1}}\right)$$
 
 | Symbol | Znaczenie |
 |--------|-----------|
@@ -104,6 +108,12 @@ $$\alpha = \min\!\left(\alpha_0 + \frac{S_{kWh}}{P_{kWp}} \cdot 0{,}20,\; 0{,}90
 | $P_{kWp}$ | Moc instalacji (kWp) |
 | 0,20 | Współczynnik przyrostu autokonsumpcji na jednostkę pojemności względnej magazynu (kWh/kWp) |
 | 0,90 | Górny limit — maksymalny realistyczny poziom autokonsumpcji |
+| $D$ | Roczne zapotrzebowanie gminy (kWh/rok) |
+| $E_{gen,1}$ | Roczna produkcja z PV w pierwszym roku (kWh/rok) |
+
+Cap $D/E_{gen,1}$ zapewnia, że autokonsumpcja nie przekroczy fizycznego
+zapotrzebowania gminy — jeśli produkcja PV przewyższa zużycie,
+nadwyżka musi trafić do sieci niezależnie od magazynu.
 
 ---
 
@@ -118,8 +128,8 @@ Większe instalacje charakteryzują się niższym kosztem jednostkowym
 |------------------|-----------------|
 | do 10 kWp | 4 000 |
 | do 50 kWp | 3 500 |
-| do 200 kWp | 3 200 |
-| powyżej 200 kWp | 2 800 |
+| do 100 kWp | 3 200 |
+| powyżej 100 kWp | 2 800 |
 
 ### 4.2 Magazyn energii
 
@@ -329,7 +339,39 @@ lub koszt pozyskania finansowania dłużnego.
 
 ---
 
-## 9. Stałe modelu
+## 9. Analiza wrażliwości
+
+Model oferuje dwa typy analizy wrażliwości, wykonywane po stronie klienta
+na wynikach głównej symulacji.
+
+### 9.1 Wrażliwość na autokonsumpcję
+
+Przebiega zakres współczynnika autokonsumpcji od 10% do 90% (co 5 pp.)
+i dla każdego punktu przelicza pełen harmonogram cash flow oraz
+wskaźniki KPI (NPV, IRR, PBP, LCOE). Pozwala ocenić, jak silnie
+opłacalność zależy od udziału energii zużywanej na miejscu.
+
+Efekt diminishing returns przy wysokiej autokonsumpcji wynika naturalnie
+z modelu — dalsze zwiększanie AC zmniejsza narzut prosumencki coraz wolniej,
+a OPEX i raty kredytu pozostają stałe.
+
+### 9.2 Wrażliwość na scenariusze cenowe
+
+Trzy scenariusze cenowe modyfikują ceny energii i stopę inflacji:
+
+| Scenariusz | Mnożnik cen | Mnożnik inflacji |
+|------------|-------------|------------------|
+| Pesymistyczny | 0,85× | 0,5× |
+| Bazowy | 1,0× | 1,0× |
+| Optymistyczny | 1,15× | 1,5× |
+
+Dla każdego scenariusza wykonywana jest pełna analiza wrażliwości
+na autokonsumpcję (sekcja 9.1), co daje rodzinę krzywych NPV/PBP
+pokazujących wpływ wahań rynku energii na opłacalność.
+
+---
+
+## 10. Stałe modelu
 
 Wartości domyślne oparte o polski rynek energetyki odnawialnej (2025/2026):
 
@@ -352,12 +394,12 @@ Wartości domyślne oparte o polski rynek energetyki odnawialnej (2025/2026):
 
 ---
 
-## 10. Przebieg obliczeń
+## 11. Przebieg obliczeń
 
 Symulacja realizowana jest w następujących krokach:
 
-1. Wyznaczenie współczynnika autokonsumpcji na podstawie rozmiaru gminy
-   i pojemności magazynu energii
+1. Wyznaczenie współczynnika autokonsumpcji na podstawie rozmiaru gminy,
+   pojemności magazynu energii i stosunku zapotrzebowania do produkcji
 2. Kalkulacja nakładów inwestycyjnych (progi kosztowe + magazyn)
    z uwzględnieniem dotacji
 3. Obliczenie parametrów kredytu (kwota, rata annuitetowa) — jeśli
@@ -370,6 +412,7 @@ Symulacja realizowana jest w następujących krokach:
 5. Obliczenie wskaźników efektywności ekonomicznej: LCOE, NPV, IRR, PBP
 6. Wygenerowanie rozkładu produkcji miesięcznej dla pierwszego roku
    eksploatacji
+7. Opcjonalnie: analiza wrażliwości na autokonsumpcję i scenariusze cenowe
 
 Wynik obliczeń obejmuje pełną tabelę przepływów pieniężnych rok po roku,
 rozkład produkcji miesięcznej oraz zestaw wskaźników umożliwiających
@@ -377,7 +420,7 @@ ocenę opłacalności inwestycji.
 
 ---
 
-## 11. Ograniczenia i uproszczenia
+## 12. Ograniczenia i uproszczenia
 
 - **Brak symulacji godzinowej** — autokonsumpcja i wykorzystanie opustu
   modelowane są agregatami rocznymi zamiast porównania profili produkcji
@@ -399,3 +442,33 @@ ocenę opłacalności inwestycji.
 - **Sinking fund nominalny** — roczna rezerwa na wymianę inwertera nie
   uwzględnia inflacji ceny inwerterów ani odsetek z odłożonych środków
   (wartości netują się przy typowych założeniach makroekonomicznych).
+
+---
+
+## Źródła danych i kontekst prawny
+
+### Koszty inwestycji (CAPEX PV)
+- **IEO** — coroczny raport „Rynek Fotowoltaiki w Polsce", średnie ceny za 1 kWp wg skali.
+- **Globenergia** — bieżące zestawienia kosztów komponentów i robocizny.
+- **BIP / przetargi** — publiczne przetargi „OZE w gminie X" dają realne ceny rynkowe samorządów.
+
+### Profil zużycia gminy
+- **GUS (Bank Danych Lokalnych)** — zużycie energii na 1 mieszkańca w gminie/powiecie.
+- **KAPE** — typowe profile zużycia budynków użyteczności publicznej.
+- **Plany Gospodarki Niskoemisyjnej (PGN)** — publiczne audyty energetyczne gmin z dokładnymi danymi.
+
+### Nasłonecznienie
+- **PVGIS v5.2** (`re.jrc.ec.europa.eu`) — API UE, dane TMY (Typical Meteorological Year),
+  godzinowe i miesięczne. Używany endpoint `PVcalc`.
+
+### Ceny energii
+- **URE (Urząd Regulacji Energetyki)** — taryfy zatwierdzone (G11, C11, C12) i ceny obrotu.
+- **TGE (Towarowa Giełda Energii)** — ceny hurtowe RDN.
+- **Faktury własne / przetargi gminne** — realny narzut prosumencki dla konkretnych OSD.
+
+### Kontekst prawny
+- Spółdzielnie energetyczne korzystają z systemu **depozytu prosumenckiego (opust 1:0,6)**
+  — art. 38c Ustawy o OZE (Dz.U. 2015 poz. 478 z późn. zm.).
+- **Narzut prosumencki w taryfach** — sprzedawcy stosują wyższe ceny zakupu energii
+  dla odbiorców z własnym źródłem. Model różnicuje cenę bazową i cenę importu.
+- **Dofinansowania:** NFOŚiGW „Energia dla Wsi", KPO (do 80–90% na etap przedinwestycyjny).
