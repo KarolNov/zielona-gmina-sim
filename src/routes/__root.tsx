@@ -26,7 +26,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
-				title: "Symulator ROI PV — Gmina",
+				title: "Zielona Gmina PV — Kalkulator spółdzielni energetycznej",
 			},
 		],
 		links: [

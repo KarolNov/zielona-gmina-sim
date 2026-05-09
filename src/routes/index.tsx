@@ -220,14 +220,14 @@ function App() {
 					}}
 				/>
 
-				<p className="island-kicker mb-3">Symulator PV — Gmina</p>
+				<p className="island-kicker mb-3">Zielona Gmina PV</p>
 				<h1 className="display-title mb-5 max-w-3xl text-4xl leading-tight font-bold tracking-tight text-(--sea-ink) sm:text-6xl">
-					Symulator zwrotu inwestycji w spółdzielnie fotowoltaiczną
+					Kalkulator opłacalności spółdzielni energetycznej
 				</h1>
 
 				<p className="mb-8 max-w-2xl text-base text-(--sea-ink-soft) sm:text-lg">
-					Wprowadź parametry gminy i instalacji. Profile nasłonecznienia są
-					pobierane automatycznie po aktualizacji danych.
+					Wprowadź parametry gminy i instalacji. Profile nasłonecznienia
+					pobierane są automatycznie przy uruchomieniu symulacji.
 				</p>
 
 				<details className="group mt-6 rounded-xl border border-(--chip-line) bg-(--chip-bg)">
