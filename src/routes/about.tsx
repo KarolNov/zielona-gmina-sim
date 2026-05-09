@@ -10,12 +10,17 @@ function About() {
       <section className="island-shell rounded-2xl p-6 sm:p-8">
         <p className="island-kicker mb-2">O projekcie</p>
   <h1 className="display-title mb-3 text-4xl font-bold text-(--sea-ink) sm:text-5xl">
-          Symulator ROI instalacji fotowoltaicznych dla gmin
+          Kalkulator opłacalności spółdzielni energetycznej
         </h1>
   <p className="m-0 max-w-3xl text-base leading-8 text-(--sea-ink-soft)">
-          Ta aplikacja ma na celu pomóc w szybkiej ocenie zwrotu z inwestycji
-          w panele fotowoltaiczne na poziomie gminy. Na początek znajduje się
-          prosty interfejs do wprowadzania parametrów i podglądu konfiguracji.
+          Aplikacja powstała w ramach pracy licencjackiej z ekonomii. Pozwala ocenić
+          opłacalność gminnej inwestycji fotowoltaicznej przy użyciu
+          wskaźników LCOE, NPV, IRR i&nbsp;PBP. Użytkownik wprowadza
+          parametry techniczne i&nbsp;finansowe, a&nbsp;aplikacja
+          wizualizuje wyniki w&nbsp;czasie rzeczywistym.
+        </p>
+        <p className="mt-4 text-sm text-(--sea-ink-soft)">
+          Autor: <a href="https://karolnov.dev" target="_blank" rel="noopener noreferrer" className="text-(--accent) hover:underline">karolnov.dev</a>
         </p>
       </section>
     </main>
