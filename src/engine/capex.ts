@@ -5,13 +5,12 @@ import type { CapexResult } from "./types";
  * Oblicza calkowite naklady inwestycyjne (CAPEX) instalacji PV.
  *
  * Stosuje progowe ceny jednostkowe — wieksze instalacje maja nizszy
- * koszt za kWp dzieki ekonomii skali:
- * - do 10 kWp: 5 500 PLN/kWp
- * - do 50 kWp: 5 000 PLN/kWp
- * - do 200 kWp: 4 500 PLN/kWp
- * - powyzej 200 kWp: 4 000 PLN/kWp
+ * koszt za kWp dzieki efektowi skali:
+ * - mikroinstalacje (do 50 kW): 4 100 PLN/kWp
+ * - male i srednie instalacje (50 kW – 1 MW): 3 100 PLN/kWp
+ * - farmy przemyslowe (powyzej 1 MW): 2 400 PLN/kWp
  *
- * Opcjonalnie dolicza koszt magazynu energii (2 500 PLN/kWh).
+ * Opcjonalnie dolicza koszt magazynu energii.
  *
  * @param pvPower - Moc zainstalowana w kWp
  * @param storageCapacity - Pojemnosc magazynu w kWh (0 jesli brak magazynu)
