@@ -7,14 +7,15 @@ export const PROJECT_LIFETIME = 25;
 export const DISCOUNT_RATE = 0.06;
 
 /**
- * Progi cenowe CAPEX za kWp w zaleznosci od skali instalacji.
- * Wieksze instalacje maja nizszy koszt jednostkowy (ekonomia skali).
+ * Progi cenowe CAPEX za kWp w zaleznosci od skali instalacji (efekt skali).
+ * - mikroinstalacje (do 50 kW): 4 100 PLN/kWp
+ * - male i srednie instalacje (50 kW – 1 MW): 3 100 PLN/kWp
+ * - farmy przemyslowe (powyzej 1 MW): 2 400 PLN/kWp
  */
 export const CAPEX_TIERS = [
-  { maxKwp: 10, costPerKwp: 4000 },
-  { maxKwp: 50, costPerKwp: 3500 },
-  { maxKwp: 100, costPerKwp: 3200 },
-  { maxKwp: Infinity, costPerKwp: 2800 },
+  { maxKwp: 50, costPerKwp: 4100 },
+  { maxKwp: 1000, costPerKwp: 3100 },
+  { maxKwp: Infinity, costPerKwp: 2400 },
 ] as const;
 
 /** Koszt magazynu energii za kWh pojemnosci (PLN/kWh) — ceny 2025/2026 */
